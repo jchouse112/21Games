@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Play 21 Games",
-  description: "Hit 21. Don't bust. The blackjack of sports.",
+  title: "Play 21 Games — The blackjack of sports",
+  description: "Hit 21. Don't bust. Pick teams, stack runs, win the slate. Free to play, tokens only, no real money.",
 };
 
 export default function RootLayout({
