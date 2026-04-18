@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 const STEPS = [
   {
@@ -50,7 +50,7 @@ export default function Home() {
         </p>
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/auth"
+            href="/play"
             className="rounded-full bg-emerald-400 px-8 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
           >
             Play Free
