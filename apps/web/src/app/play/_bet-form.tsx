@@ -11,20 +11,14 @@ import {
   previewTable,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
-import type { Slate, SlateGame } from "@/lib/slate";
+import type { Slate, TeamEntry } from "@/lib/slate";
+import { GameCard } from "./_game-card";
 
 type Pick = BetTeam;
 
-function teamsFromGame(g: SlateGame): [Pick, Pick] {
-  return [
-    { id: g.away.id, abbr: g.away.abbr, name: g.away.name, gameId: g.id },
-    { id: g.home.id, abbr: g.home.abbr, name: g.home.name, gameId: g.id },
-  ];
-}
-
 export function BetForm({ slate }: { slate: Slate | null }) {
   const { user, state, updateBalance } = useDevUser();
-  const { addBet } = useBets();
+  const { addBet, openBets } = useBets();
   const stakes = getAvailableStakes(state.balance);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stake, setStake] = useState<number>(stakes[0] ?? 1);
@@ -38,11 +32,18 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     slate !== null &&
     slate.games.length > 0;
 
+  const lockedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!slate) return set;
+    for (const b of openBets) {
+      if (b.slateDate !== slate.date) continue;
+      for (const t of b.teams) set.add(t.id);
+    }
+    return set;
+  }, [openBets, slate]);
+
   const preview = useMemo(
-    () =>
-      nTeams >= MIN_TEAMS
-        ? previewTable(nTeams, effectiveStake)
-        : [],
+    () => (nTeams >= MIN_TEAMS ? previewTable(nTeams, effectiveStake) : []),
     [nTeams, effectiveStake],
   );
   const probs = useMemo(
@@ -50,14 +51,17 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     [nTeams],
   );
 
-  function togglePick(t: Pick) {
+  function togglePick(team: TeamEntry, gameId: string) {
+    if (lockedTeamIds.has(team.id)) return;
     setPicks((prev) => {
-      if (prev.find((p) => p.id === t.id)) {
-        return prev.filter((p) => p.id !== t.id);
+      if (prev.find((p) => p.id === team.id)) {
+        return prev.filter((p) => p.id !== team.id);
       }
-      if (prev.find((p) => p.gameId === t.gameId)) return prev;
       if (prev.length >= MAX_TEAMS) return prev;
-      return [...prev, t];
+      return [
+        ...prev,
+        { id: team.id, abbr: team.abbr, name: team.name, gameId },
+      ];
     });
   }
 
@@ -100,29 +104,25 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     <Shell
       meta={`${slate.date} \u00b7 ${slate.games.length} game${slate.games.length === 1 ? "" : "s"}`}
     >
-      <ul className="mt-6 divide-y divide-zinc-800">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {slate.games.map((g) => {
-          const [away, home] = teamsFromGame(g);
-          const pickedGame = picks.find((p) => p.gameId === g.id);
+          const awaySelected = picks.some((p) => p.id === g.away.id);
+          const homeSelected = picks.some((p) => p.id === g.home.id);
+          const awayLocked = lockedTeamIds.has(g.away.id);
+          const homeLocked = lockedTeamIds.has(g.home.id);
           return (
-            <li key={g.id} className="flex items-center justify-between gap-4 py-3">
-              <div className="flex items-center gap-2">
-                <TeamPill team={away} picked={pickedGame?.id === away.id} disabled={!!pickedGame && pickedGame.id !== away.id} onClick={() => togglePick(away)} />
-                <span className="text-xs text-zinc-500">@</span>
-                <TeamPill team={home} picked={pickedGame?.id === home.id} disabled={!!pickedGame && pickedGame.id !== home.id} onClick={() => togglePick(home)} />
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-zinc-100">{g.timeLabel}</div>
-                {g.venue ? (
-                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    {g.venue}
-                  </div>
-                ) : null}
-              </div>
-            </li>
+            <GameCard
+              key={g.id}
+              game={g}
+              awaySelected={awaySelected}
+              homeSelected={homeSelected}
+              awayDisabled={awayLocked && !awaySelected}
+              homeDisabled={homeLocked && !homeSelected}
+              onToggleTeam={togglePick}
+            />
           );
         })}
-      </ul>
+      </div>
 
       <BetControls
         picks={picks}
@@ -135,12 +135,19 @@ export function BetForm({ slate }: { slate: Slate | null }) {
         canSubmit={canSubmit}
         onSubmit={submit}
         onClear={() => setPicks([])}
+        lockedCount={lockedTeamIds.size}
       />
     </Shell>
   );
 }
 
-function Shell({ meta, children }: { meta?: string; children: React.ReactNode }) {
+function Shell({
+  meta,
+  children,
+}: {
+  meta?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -156,29 +163,6 @@ function Shell({ meta, children }: { meta?: string; children: React.ReactNode })
   );
 }
 
-function TeamPill({
-  team,
-  picked,
-  disabled,
-  onClick,
-}: {
-  team: Pick;
-  picked: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const base = "rounded-md border px-3 py-1.5 font-mono text-sm transition";
-  const state = picked
-    ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
-    : disabled
-      ? "border-zinc-800 bg-zinc-900/40 text-zinc-600 cursor-not-allowed"
-      : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:border-zinc-500";
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className={`${base} ${state}`}>
-      {team.abbr}
-    </button>
-  );
-}
 
 function BetControls({
   picks,
@@ -191,6 +175,7 @@ function BetControls({
   canSubmit,
   onSubmit,
   onClear,
+  lockedCount,
 }: {
   picks: Pick[];
   stakes: number[];
@@ -202,6 +187,7 @@ function BetControls({
   canSubmit: boolean;
   onSubmit: () => void;
   onClear: () => void;
+  lockedCount: number;
 }) {
   const nTeams = picks.length;
   return (
@@ -217,6 +203,11 @@ function BetControls({
             {nTeams < MIN_TEAMS ? (
               <span className="ml-2 text-zinc-500">
                 ({MIN_TEAMS - nTeams} more to submit)
+              </span>
+            ) : null}
+            {lockedCount > 0 ? (
+              <span className="ml-2 text-zinc-600">
+                &middot; {lockedCount} team{lockedCount === 1 ? "" : "s"} locked in open bets
               </span>
             ) : null}
           </p>
@@ -262,7 +253,9 @@ function BetControls({
                   key={row.total}
                   className={`rounded-md border px-1 py-2 ${row.isBj ? "border-emerald-400/40 bg-emerald-400/10" : "border-zinc-800 bg-zinc-900/40"}`}
                 >
-                  <div className={`font-mono text-[10px] uppercase tracking-[0.2em] ${row.isBj ? "text-emerald-300" : "text-zinc-500"}`}>
+                  <div
+                    className={`font-mono text-[10px] uppercase tracking-[0.2em] ${row.isBj ? "text-emerald-300" : "text-zinc-500"}`}
+                  >
                     {row.total}
                     {row.isBj ? " BJ" : ""}
                   </div>

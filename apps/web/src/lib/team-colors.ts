@@ -1,0 +1,37 @@
+const TEAM_COLORS: Record<string, string> = {
+  ARI: "bg-red-900",
+  ATL: "bg-red-800",
+  BAL: "bg-orange-600",
+  BOS: "bg-red-700",
+  CHC: "bg-blue-700",
+  CWS: "bg-zinc-700",
+  CIN: "bg-red-600",
+  CLE: "bg-red-700",
+  COL: "bg-purple-800",
+  DET: "bg-blue-900",
+  HOU: "bg-orange-700",
+  KC: "bg-blue-700",
+  LAA: "bg-red-700",
+  LAD: "bg-blue-600",
+  MIA: "bg-teal-500",
+  MIL: "bg-amber-900",
+  MIN: "bg-blue-800",
+  NYM: "bg-blue-700",
+  NYY: "bg-slate-800",
+  OAK: "bg-green-700",
+  ATH: "bg-green-700",
+  PHI: "bg-red-600",
+  PIT: "bg-amber-600",
+  SD: "bg-amber-700",
+  SEA: "bg-teal-700",
+  SF: "bg-orange-600",
+  STL: "bg-red-700",
+  TB: "bg-blue-800",
+  TEX: "bg-blue-700",
+  TOR: "bg-blue-600",
+  WSH: "bg-red-700",
+};
+
+export function getTeamColor(abbr: string): string {
+  return TEAM_COLORS[abbr] ?? "bg-zinc-800";
+}

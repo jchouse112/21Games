@@ -1,9 +1,16 @@
-import { fetchMlbSchedule, fetchMlbTeamsMap } from "./mlb";
+import {
+  fetchMlbSchedule,
+  fetchMlbTeamsMap,
+  fetchPitcherStatsMap,
+  formatPitcherName,
+} from "./mlb";
 
 export type TeamEntry = {
   id: number;
   abbr: string;
   name: string;
+  pitcher: string | null;
+  era: string | null;
 };
 
 export type SlateGame = {
@@ -49,22 +56,47 @@ export async function getTodaySlate(date?: string): Promise<Slate> {
   const rawGames = schedule.dates?.[0]?.games ?? [];
   const game1Only = rawGames.filter((g) => (g.gameNumber ?? 1) <= 1);
 
-  const games: SlateGame[] = game1Only
-    .filter(
-      (g) =>
-        teamsMap.has(g.teams.away.team.id) &&
-        teamsMap.has(g.teams.home.team.id),
-    )
+  const eligibleGames = game1Only.filter(
+    (g) =>
+      teamsMap.has(g.teams.away.team.id) &&
+      teamsMap.has(g.teams.home.team.id),
+  );
+
+  const pitcherIds = new Set<number>();
+  for (const g of eligibleGames) {
+    const awayPid = g.teams.away.probablePitcher?.id;
+    const homePid = g.teams.home.probablePitcher?.id;
+    if (awayPid) pitcherIds.add(awayPid);
+    if (homePid) pitcherIds.add(homePid);
+  }
+
+  const pitcherStats = await fetchPitcherStatsMap(Array.from(pitcherIds));
+
+  const games: SlateGame[] = eligibleGames
     .map((g) => {
-      const away = teamsMap.get(g.teams.away.team.id)!;
-      const home = teamsMap.get(g.teams.home.team.id)!;
+      const awayTeam = teamsMap.get(g.teams.away.team.id)!;
+      const homeTeam = teamsMap.get(g.teams.home.team.id)!;
+      const awayPid = g.teams.away.probablePitcher?.id;
+      const homePid = g.teams.home.probablePitcher?.id;
       return {
         id: String(g.gamePk),
         startsAtIso: g.gameDate,
         timeLabel: formatEtTime(g.gameDate),
         venue: g.venue?.name ?? "",
-        away: { id: away.id, abbr: away.abbr, name: away.name },
-        home: { id: home.id, abbr: home.abbr, name: home.name },
+        away: {
+          id: awayTeam.id,
+          abbr: awayTeam.abbr,
+          name: awayTeam.name,
+          pitcher: formatPitcherName(g.teams.away.probablePitcher),
+          era: awayPid ? pitcherStats.get(awayPid)?.displayEra ?? null : null,
+        },
+        home: {
+          id: homeTeam.id,
+          abbr: homeTeam.abbr,
+          name: homeTeam.name,
+          pitcher: formatPitcherName(g.teams.home.probablePitcher),
+          era: homePid ? pitcherStats.get(homePid)?.displayEra ?? null : null,
+        },
       };
     })
     .sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso));
