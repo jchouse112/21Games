@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useBets } from "@/lib/use-bets";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
-import { handProbabilities } from "@/lib/odds";
+import { handProbabilities, payoutForTotal, ZONE_LOW, TARGET } from "@/lib/odds";
 import {
   buildMockRunsMap,
   computeBetProgress,
@@ -57,7 +57,7 @@ export function ActiveBets() {
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {openBets.length} active
-            {lastUpdated && ` · updated ${new Date(lastUpdated).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+            {lastUpdated && ` Â· updated ${new Date(lastUpdated).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
           </span>
           <button
             type="button"
@@ -110,6 +110,30 @@ function BetRow({
         : progress.liveTotal >= 15
           ? "text-amber-200"
           : "text-zinc-200";
+  const inZone =
+    progress.liveTotal >= ZONE_LOW && progress.liveTotal <= TARGET;
+  const livePayout = progress.allVoided
+    ? bet.stake
+    : inZone
+      ? payoutForTotal(bet.teams.length, progress.liveTotal, bet.stake)
+      : 0;
+  const payoutTint = progress.allVoided
+    ? "text-zinc-200"
+    : progress.liveTotal === TARGET
+      ? "text-emerald-300"
+      : inZone
+        ? "text-amber-200"
+        : "text-zinc-600";
+  const payoutLabel = progress.allVoided
+    ? `${bet.stake}`
+    : inZone
+      ? livePayout.toFixed(1)
+      : "\u2014";
+  const payoutSub = progress.allVoided
+    ? "refund"
+    : progress.allFinalOrVoided
+      ? "final"
+      : "if settles now";
 
   return (
     <li className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
@@ -122,7 +146,7 @@ function BetRow({
             })}
           </div>
           <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            {bet.teams.length} teams · placed {placed} · win {(probs.pZone * 100).toFixed(0)}% · bj {(probs.pBj * 100).toFixed(1)}%
+            {bet.teams.length} teams Â· placed {placed} Â· win {(probs.pZone * 100).toFixed(0)}% Â· bj {(probs.pBj * 100).toFixed(1)}%
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -131,6 +155,15 @@ function BetRow({
               Total
             </p>
             <p className={`text-2xl font-semibold ${totalTint}`}>{totalLabel}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Payout
+            </p>
+            <p className={`text-2xl font-semibold ${payoutTint}`}>{payoutLabel}</p>
+            <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+              {payoutSub}
+            </p>
           </div>
           <div className="text-right">
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -171,7 +204,7 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
     return (
       <span className={`${base} border-zinc-700 bg-zinc-900 text-zinc-300`}>
         <span>{abbr}</span>
-        <span className="text-zinc-500">—</span>
+        <span className="text-zinc-500">â€”</span>
       </span>
     );
   }
@@ -189,7 +222,7 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
       : "border-amber-400/40 bg-amber-400/10 text-amber-100";
   const liveSuffix =
     score.status === "live" && score.inningOrdinal
-      ? ` ${score.inningHalf === "Top" ? "▲" : "▼"}${score.inning ?? ""}`
+      ? ` ${score.inningHalf === "Top" ? "â–²" : "â–¼"}${score.inning ?? ""}`
       : "";
   return (
     <span className={`${base} ${color}`} title={score.status === "live" ? `${score.inningOrdinal ?? ""} ${score.inningHalf ?? ""}`.trim() : score.status}>
@@ -235,7 +268,7 @@ function MockSettleButton({
         onClick={() => setOpen(true)}
         className="rounded-md border border-dashed border-zinc-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 hover:border-amber-400/50 hover:text-amber-200"
       >
-        Dev · force settle
+        Dev Â· force settle
       </button>
     );
   }
