@@ -1,8 +1,6 @@
 import { getTodaySlate, type Slate } from "@/lib/slate";
-import { Dashboard } from "./_dashboard";
 import { BetForm } from "./_bet-form";
-import { ActiveBets } from "./_active-bets";
-import { ClosedBets } from "./_closed-bets";
+import { OpenBetsPill } from "./_open-bets-pill";
 
 export default async function PlayPage() {
   let slate: Slate | null = null;
@@ -14,10 +12,8 @@ export default async function PlayPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
-      <Dashboard />
-      <ActiveBets />
+      <OpenBetsPill />
       <BetForm slate={slate} />
-      <ClosedBets />
     </main>
   );
 }

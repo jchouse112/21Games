@@ -115,14 +115,20 @@ During pick flow, the bet form shows:
 
 ## 8. UI — Screens (v0)
 
-Single authenticated-esque page at `/play` (plus public landing at `/`):
+Two authenticated-esque pages under `/play` (plus public landing at `/`):
 
-1. **Header** — brand, current tier, balance, dev-user switcher.
-2. **Dashboard card** — identity, balance, tier, stake options.
-3. **Dev controls** — balance adjusters. Must be removable before any public launch.
-4. **Open bets** — list of unsettled bets, each with cancel button.
-5. **Bet form / today's slate** — game cards grid (pitcher, ERA, venue, time, team color), pick tiles, stake selector, payout preview, win/BJ/bust %, place-bet.
-6. **Closed bets** — collapsible history with outcomes. *(Not yet implemented.)*
+### 8.1 Shared header
+Brand wordmark · **Bet / My Bets** nav tabs · current tier · balance · dev-user switcher. Persists across both pages.
+
+### 8.2 `/play` — Bet submission
+1. **Open bets pill** — compact banner `N open bets · View my bets →` when the user has any open bets; hidden otherwise.
+2. **Today's slate** — game card grid. Each card shows team colors, name, and either pregame flavor (pitcher, ERA, venue, start time) or **live overlay** (status chip, current inning, per-team runs) once that game has started. Clicking a team row toggles it into the current pick set, subject to cross-bet team lock.
+3. **Bet controls** — picks summary, tier-gated stake selector, payout preview grid (15–21), win/BJ/bust %, Place bet.
+
+### 8.3 `/play/my-bets` — My dashboard
+1. **Dashboard card** — identity, balance, tier, available stakes, dev controls (balance adjusters, clear bets). Dev controls must be removable before any public launch.
+2. **Open bets** — live-updating list of unsettled bets. Each row shows per-team chips with runs + game-status indicators (`F`, live inning, `VOID`, pregame dash), running total vs. 21, win/BJ %, Cancel (pregame refund) or Settle (once all games are final/voided), plus a dev force-settle form for mock runs.
+3. **Closed bets** — settled history with Win / Blackjack / Short / Bust chip, stake, payout, net. Collapsible past three rows.
 
 No other pages in v0.
 

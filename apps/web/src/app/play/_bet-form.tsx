@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { getAvailableStakes } from "@/lib/dev-users";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useBets } from "@/lib/use-bets";
+import { useLiveScores } from "@/lib/use-live-scores";
 import {
   MAX_TEAMS,
   MIN_TEAMS,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
 import type { Slate, TeamEntry } from "@/lib/slate";
+import type { RunsMap } from "@/lib/settlement";
 import { GameCard } from "./_game-card";
 
 type Pick = BetTeam;
@@ -22,6 +24,11 @@ export function BetForm({ slate }: { slate: Slate | null }) {
   const stakes = getAvailableStakes(state.balance);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stake, setStake] = useState<number>(stakes[0] ?? 1);
+
+  const { runsByDate } = useLiveScores(slate ? [slate.date] : []);
+  const runs: RunsMap = slate
+    ? (runsByDate.get(slate.date) ?? new Map())
+    : new Map();
 
   const effectiveStake = stakes.includes(stake) ? stake : (stakes[0] ?? 1);
   const nTeams = picks.length;
@@ -118,6 +125,8 @@ export function BetForm({ slate }: { slate: Slate | null }) {
               homeSelected={homeSelected}
               awayDisabled={awayLocked && !awaySelected}
               homeDisabled={homeLocked && !homeSelected}
+              awayScore={runs.get(g.away.id) ?? null}
+              homeScore={runs.get(g.home.id) ?? null}
               onToggleTeam={togglePick}
             />
           );
@@ -162,7 +171,6 @@ function Shell({
     </section>
   );
 }
-
 
 function BetControls({
   picks,
