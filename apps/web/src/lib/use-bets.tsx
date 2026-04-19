@@ -17,8 +17,10 @@ import { useDevUser } from "./use-dev-user";
 type ContextValue = {
   bets: Bet[];
   openBets: Bet[];
+  settledBets: Bet[];
   addBet: (bet: Bet) => void;
   removeBet: (id: string) => void;
+  updateBet: (id: string, patch: Partial<Bet>) => void;
   clearBets: () => void;
 };
 
@@ -72,15 +74,37 @@ export function BetsProvider({ children }: { children: ReactNode }) {
     [userId],
   );
 
+  const updateBet = useCallback(
+    (id: string, patch: Partial<Bet>) => {
+      setBets((prev) => {
+        const next = prev.map((b) => (b.id === id ? { ...b, ...patch } : b));
+        saveBets(userId, next);
+        return next;
+      });
+    },
+    [userId],
+  );
+
   const clearBets = useCallback(() => {
     setBets([]);
     saveBets(userId, []);
   }, [userId]);
 
   const openBets = bets.filter((b) => b.status === "open");
+  const settledBets = bets.filter((b) => b.status === "settled");
 
   return (
-    <Ctx.Provider value={{ bets, openBets, addBet, removeBet, clearBets }}>
+    <Ctx.Provider
+      value={{
+        bets,
+        openBets,
+        settledBets,
+        addBet,
+        removeBet,
+        updateBet,
+        clearBets,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

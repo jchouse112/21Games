@@ -2,6 +2,7 @@ import { getTodaySlate, type Slate } from "@/lib/slate";
 import { Dashboard } from "./_dashboard";
 import { BetForm } from "./_bet-form";
 import { ActiveBets } from "./_active-bets";
+import { ClosedBets } from "./_closed-bets";
 
 export default async function PlayPage() {
   let slate: Slate | null = null;
@@ -16,6 +17,7 @@ export default async function PlayPage() {
       <Dashboard />
       <ActiveBets />
       <BetForm slate={slate} />
+      <ClosedBets />
     </main>
   );
 }
