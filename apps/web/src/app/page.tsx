@@ -112,11 +112,16 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-linear-to-b from-zinc-950/70 via-zinc-950/40 to-zinc-950" />
         </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 hidden md:block"
-        >
-          <div className="absolute left-1/2 top-1/2 h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div aria-hidden="true" className="absolute inset-0 hidden md:block">
+          <Image
+            src="/hero-crowd-wide.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-linear-to-b from-zinc-950/75 via-zinc-950/45 to-zinc-950" />
         </div>
         <div className="relative z-10 flex flex-col items-center">
           <span className="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">
@@ -125,7 +130,7 @@ export default function Home() {
           <h1 className="mt-6 text-6xl font-semibold tracking-tight sm:text-8xl">
             Hit <span className="text-emerald-400">21</span>. Don&apos;t bust.
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-zinc-300 sm:text-xl sm:text-zinc-400">
+          <p className="mt-6 max-w-xl text-lg text-zinc-300 sm:text-xl">
             The blackjack of sports. Pick teams. Stack runs. Win the slate.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
@@ -137,16 +142,16 @@ export default function Home() {
             </Link>
             <Link
               href="#how-it-works"
-              className="rounded-full border border-zinc-700 bg-zinc-950/60 px-8 py-3 text-sm font-semibold text-zinc-200 backdrop-blur transition hover:border-zinc-500 sm:bg-transparent sm:backdrop-blur-none"
+              className="rounded-full border border-zinc-700 bg-zinc-950/60 px-8 py-3 text-sm font-semibold text-zinc-200 backdrop-blur transition hover:border-zinc-500"
             >
               How it works
             </Link>
           </div>
-          <p className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-mono text-[13px] uppercase tracking-[0.15em] text-zinc-400 sm:text-xs sm:tracking-[0.3em] sm:text-zinc-500">
+          <p className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-mono text-[13px] uppercase tracking-[0.15em] text-zinc-400 sm:text-xs sm:tracking-[0.3em]">
             <span>100 free tokens</span>
-            <span aria-hidden="true" className="text-zinc-600 sm:text-zinc-700">&middot;</span>
+            <span aria-hidden="true" className="text-zinc-600">&middot;</span>
             <span>No credit card</span>
-            <span aria-hidden="true" className="text-zinc-600 sm:text-zinc-700">&middot;</span>
+            <span aria-hidden="true" className="text-zinc-600">&middot;</span>
             <span>18+</span>
           </p>
         </div>
