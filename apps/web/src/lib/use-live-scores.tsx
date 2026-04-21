@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { RunsMap, TeamScore } from "./settlement";
+import { scoreKey, type Sport } from "./sport";
 
 const POLL_MS = 60_000;
 
@@ -11,49 +12,71 @@ type ScoresPayload = {
   fetchedAt: string;
 };
 
-export function useLiveScores(dates: string[]): {
-  runsByDate: Map<string, RunsMap>;
+export type ScoreTarget = { sport: Sport; date: string };
+
+function endpointFor(sport: Sport, date: string): string {
+  return sport === "nhl"
+    ? `/api/scores/nhl?date=${date}`
+    : `/api/scores?date=${date}`;
+}
+
+function dedupeTargets(targets: ScoreTarget[]): ScoreTarget[] {
+  const seen = new Set<string>();
+  const out: ScoreTarget[] = [];
+  for (const t of targets) {
+    const k = scoreKey(t.sport, t.date);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+  }
+  return out;
+}
+
+export function useLiveScores(targets: ScoreTarget[]): {
+  runsBySportDate: Map<string, RunsMap>;
   lastUpdated: string | null;
   refresh: () => void;
 } {
-  const [runsByDate, setRunsByDate] = useState<Map<string, RunsMap>>(
+  const [runsBySportDate, setRunsBySportDate] = useState<Map<string, RunsMap>>(
     () => new Map(),
   );
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const datesKey = dates.join("|");
+  const targetsKey = targets
+    .map((t) => scoreKey(t.sport, t.date))
+    .sort()
+    .join(",");
 
   useEffect(() => {
-    if (dates.length === 0) {
-      setRunsByDate(new Map());
-      return;
-    }
+    const unique = dedupeTargets(targets);
+    if (unique.length === 0) return;
     let cancelled = false;
 
     async function fetchAll() {
       const results = await Promise.all(
-        dates.map(async (date) => {
+        unique.map(async ({ sport, date }) => {
+          const key = scoreKey(sport, date);
           try {
-            const res = await fetch(`/api/scores?date=${date}`, {
+            const res = await fetch(endpointFor(sport, date), {
               cache: "no-store",
             });
-            if (!res.ok) return [date, null] as const;
+            if (!res.ok) return [key, null] as const;
             const json = (await res.json()) as ScoresPayload;
             const map: RunsMap = new Map();
             for (const [k, v] of Object.entries(json.scores)) {
               map.set(Number(k), v);
             }
-            return [date, map] as const;
+            return [key, map] as const;
           } catch {
-            return [date, null] as const;
+            return [key, null] as const;
           }
         }),
       );
       if (cancelled) return;
-      setRunsByDate((prev) => {
+      setRunsBySportDate((prev) => {
         const next = new Map(prev);
-        for (const [date, map] of results) {
-          if (map) next.set(date, map);
+        for (const [key, map] of results) {
+          if (map) next.set(key, map);
         }
         return next;
       });
@@ -67,9 +90,9 @@ export function useLiveScores(dates: string[]): {
       clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datesKey, tick]);
+  }, [targetsKey, tick]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  return { runsByDate, lastUpdated, refresh };
+  return { runsBySportDate, lastUpdated, refresh };
 }

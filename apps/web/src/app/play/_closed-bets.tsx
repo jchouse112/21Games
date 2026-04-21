@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useBets } from "@/lib/use-bets";
 import type { Bet } from "@/lib/bets";
+import type { Sport } from "@/lib/sport";
 
 
 const STATUS_CHIP: Record<
@@ -61,6 +62,20 @@ export function ClosedBets() {
   );
 }
 
+function SportBadge({ sport }: { sport: Sport }) {
+  const cls =
+    sport === "nhl"
+      ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+      : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+  return (
+    <span
+      className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${cls}`}
+    >
+      {sport}
+    </span>
+  );
+}
+
 function ClosedRow({ bet }: { bet: Bet }) {
   const outcome = bet.outcome;
   const chip = outcome ? STATUS_CHIP[outcome.status] : null;
@@ -78,6 +93,7 @@ function ClosedRow({ bet }: { bet: Bet }) {
     <li className="flex flex-wrap items-center justify-between gap-4 py-4">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
+          <SportBadge sport={bet.sport} />
           {chip && (
             <span
               className={`rounded-md border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${chip.className}`}

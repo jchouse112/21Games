@@ -6,6 +6,7 @@ export type DevUser = {
 export type UserState = {
   balance: number;
   createdAt: string;
+  lastRefillEtDate?: string;
 };
 
 export type Tier = "Basement" | "Ground" | "Main Floor" | "Penthouse";
@@ -19,6 +20,8 @@ export const DEV_USERS: DevUser[] = [
 ];
 
 export const DEFAULT_BALANCE = 100;
+export const MIN_STAKE = 1;
+export const REFILL_AMOUNT = 10;
 
 export function getTier(balance: number): Tier {
   if (balance < 10) return "Basement";

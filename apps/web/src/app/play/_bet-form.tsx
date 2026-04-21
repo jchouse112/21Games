@@ -5,33 +5,106 @@ import { getAvailableStakes } from "@/lib/dev-users";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useBets } from "@/lib/use-bets";
 import { useLiveScores } from "@/lib/use-live-scores";
+import { useClock } from "@/lib/use-clock";
+import { isPickLocked, msUntilPickLock } from "@/lib/pick-lock";
 import {
   MAX_TEAMS,
   MIN_TEAMS,
   handProbabilities,
+  lambdaFor,
   previewTable,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
-import type { Slate, TeamEntry } from "@/lib/slate";
+import type {
+  NhlSlate,
+  NhlSlateGame,
+  NhlTeamEntry,
+  Slate,
+  SlateGame,
+  TeamEntry,
+} from "@/lib/slate";
 import type { RunsMap } from "@/lib/settlement";
+import { scoreKey, type Sport } from "@/lib/sport";
 import { GameCard } from "./_game-card";
 
 type Pick = BetTeam;
+type AnySlate = Slate | NhlSlate;
+type AnySlateGame = SlateGame | NhlSlateGame;
+type AnyTeamEntry = TeamEntry | NhlTeamEntry;
 
-export function BetForm({ slate }: { slate: Slate | null }) {
+const SPORT_LABELS: Record<Sport, string> = { mlb: "MLB", nhl: "NHL" };
+
+export function BetForm({
+  sport,
+  slate,
+}: {
+  sport: Sport;
+  slate: AnySlate | null;
+}) {
   const { user, state, updateBalance } = useDevUser();
   const { addBet, openBets } = useBets();
   const stakes = getAvailableStakes(state.balance);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stake, setStake] = useState<number>(stakes[0] ?? 1);
 
-  const { runsByDate } = useLiveScores(slate ? [slate.date] : []);
-  const runs: RunsMap = slate
-    ? (runsByDate.get(slate.date) ?? new Map())
-    : new Map();
+  const { runsBySportDate } = useLiveScores(
+    slate ? [{ sport, date: slate.date }] : [],
+  );
+  const runs: RunsMap = useMemo(
+    () =>
+      slate
+        ? (runsBySportDate.get(scoreKey(sport, slate.date)) ??
+          new Map<number, never>())
+        : new Map(),
+    [slate, sport, runsBySportDate],
+  );
+  const now = useClock();
+
+  const lockInfoByGame = useMemo(() => {
+    const map = new Map<
+      string,
+      { locked: boolean; msUntilLock: number | null }
+    >();
+    if (!slate) return map;
+    for (const g of slate.games) {
+      const status = runs.get(g.away.id)?.status ?? runs.get(g.home.id)?.status;
+      const locked = isPickLocked({
+        startsAtIso: g.startsAtIso,
+        liveStatus: status,
+        now,
+      });
+      const msUntil = locked
+        ? null
+        : msUntilPickLock({
+            startsAtIso: g.startsAtIso,
+            liveStatus: status,
+            now,
+          });
+      map.set(g.id, { locked, msUntilLock: msUntil });
+    }
+    return map;
+  }, [slate, runs, now]);
+
+  const startedTeamIds = useMemo(() => {
+    const set = new Set<number>();
+    if (!slate) return set;
+    for (const g of slate.games) {
+      if (lockInfoByGame.get(g.id)?.locked) {
+        set.add(g.away.id);
+        set.add(g.home.id);
+      }
+    }
+    return set;
+  }, [slate, lockInfoByGame]);
+
+  const effectivePicks = useMemo(
+    () => picks.filter((p) => !startedTeamIds.has(p.id)),
+    [picks, startedTeamIds],
+  );
+  const droppedPicks = picks.length - effectivePicks.length;
 
   const effectiveStake = stakes.includes(stake) ? stake : (stakes[0] ?? 1);
-  const nTeams = picks.length;
+  const nTeams = effectivePicks.length;
   const canSubmit =
     nTeams >= MIN_TEAMS &&
     nTeams <= MAX_TEAMS &&
@@ -43,28 +116,35 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     const set = new Set<number>();
     if (!slate) return set;
     for (const b of openBets) {
+      if (b.sport !== sport) continue;
       if (b.slateDate !== slate.date) continue;
       for (const t of b.teams) set.add(t.id);
     }
     return set;
-  }, [openBets, slate]);
+  }, [openBets, slate, sport]);
 
+  const lambda = useMemo(() => lambdaFor(sport), [sport]);
   const preview = useMemo(
-    () => (nTeams >= MIN_TEAMS ? previewTable(nTeams, effectiveStake) : []),
-    [nTeams, effectiveStake],
+    () =>
+      nTeams >= MIN_TEAMS ? previewTable(nTeams, effectiveStake, lambda) : [],
+    [nTeams, effectiveStake, lambda],
   );
   const probs = useMemo(
-    () => (nTeams >= MIN_TEAMS ? handProbabilities(nTeams) : null),
-    [nTeams],
+    () => (nTeams >= MIN_TEAMS ? handProbabilities(nTeams, lambda) : null),
+    [nTeams, lambda],
   );
 
-  function togglePick(team: TeamEntry, gameId: string) {
+  function togglePick(team: AnyTeamEntry, gameId: string) {
     if (lockedTeamIds.has(team.id)) return;
+    if (startedTeamIds.has(team.id)) return;
     setPicks((prev) => {
       if (prev.find((p) => p.id === team.id)) {
         return prev.filter((p) => p.id !== team.id);
       }
-      if (prev.length >= MAX_TEAMS) return prev;
+      const effectiveCount = prev.filter(
+        (p) => !startedTeamIds.has(p.id),
+      ).length;
+      if (effectiveCount >= MAX_TEAMS) return prev;
       return [
         ...prev,
         { id: team.id, abbr: team.abbr, name: team.name, gameId },
@@ -77,8 +157,9 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     addBet({
       id: generateBetId(),
       userId: user.id,
+      sport,
       slateDate: slate.date,
-      teams: picks,
+      teams: effectivePicks,
       stake: effectiveStake,
       status: "open",
       createdAt: new Date().toISOString(),
@@ -101,7 +182,7 @@ export function BetForm({ slate }: { slate: Slate | null }) {
     return (
       <Shell meta={slate.date}>
         <p className="mt-2 text-zinc-400">
-          No MLB games on {slate.date}. Check back tomorrow.
+          No {SPORT_LABELS[sport]} games on {slate.date}. Check back tomorrow.
         </p>
       </Shell>
     );
@@ -112,21 +193,33 @@ export function BetForm({ slate }: { slate: Slate | null }) {
       meta={`${slate.date} \u00b7 ${slate.games.length} game${slate.games.length === 1 ? "" : "s"}`}
     >
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {slate.games.map((g) => {
+        {(slate.games as AnySlateGame[]).map((g) => {
           const awaySelected = picks.some((p) => p.id === g.away.id);
           const homeSelected = picks.some((p) => p.id === g.home.id);
           const awayLocked = lockedTeamIds.has(g.away.id);
           const homeLocked = lockedTeamIds.has(g.home.id);
+          const info = lockInfoByGame.get(g.id);
+          const started = info?.locked ?? false;
+          const reason = (teamLocked: boolean) =>
+            started
+              ? "Game has started \u2014 picks locked"
+              : teamLocked
+                ? "Team is already in another open bet"
+                : undefined;
           return (
             <GameCard
               key={g.id}
+              sport={sport}
               game={g}
               awaySelected={awaySelected}
               homeSelected={homeSelected}
-              awayDisabled={awayLocked && !awaySelected}
-              homeDisabled={homeLocked && !homeSelected}
+              awayDisabled={(awayLocked || started) && !awaySelected}
+              homeDisabled={(homeLocked || started) && !homeSelected}
+              awayDisabledReason={reason(awayLocked)}
+              homeDisabledReason={reason(homeLocked)}
               awayScore={runs.get(g.away.id) ?? null}
               homeScore={runs.get(g.home.id) ?? null}
+              msUntilLock={info?.msUntilLock ?? null}
               onToggleTeam={togglePick}
             />
           );
@@ -134,7 +227,7 @@ export function BetForm({ slate }: { slate: Slate | null }) {
       </div>
 
       <BetControls
-        picks={picks}
+        picks={effectivePicks}
         stakes={stakes}
         stake={effectiveStake}
         setStake={setStake}
@@ -145,6 +238,7 @@ export function BetForm({ slate }: { slate: Slate | null }) {
         onSubmit={submit}
         onClear={() => setPicks([])}
         lockedCount={lockedTeamIds.size}
+        droppedCount={droppedPicks}
       />
     </Shell>
   );
@@ -184,6 +278,7 @@ function BetControls({
   onSubmit,
   onClear,
   lockedCount,
+  droppedCount,
 }: {
   picks: Pick[];
   stakes: number[];
@@ -196,6 +291,7 @@ function BetControls({
   onSubmit: () => void;
   onClear: () => void;
   lockedCount: number;
+  droppedCount: number;
 }) {
   const nTeams = picks.length;
   return (
@@ -216,6 +312,11 @@ function BetControls({
             {lockedCount > 0 ? (
               <span className="ml-2 text-zinc-600">
                 &middot; {lockedCount} team{lockedCount === 1 ? "" : "s"} locked in open bets
+              </span>
+            ) : null}
+            {droppedCount > 0 ? (
+              <span className="ml-2 text-amber-400/80">
+                &middot; {droppedCount} dropped (game started)
               </span>
             ) : null}
           </p>

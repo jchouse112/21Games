@@ -4,14 +4,16 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useState,
+  useMemo,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
+  BETS_KEY_PREFIX,
   betsStorageKey,
   type Bet,
 } from "./bets";
+import { DEFAULT_SPORT, isSport } from "./sport";
 import { useDevUser } from "./use-dev-user";
 
 type ContextValue = {
@@ -25,16 +27,33 @@ type ContextValue = {
 };
 
 const Ctx = createContext<ContextValue | null>(null);
+const EMPTY_BETS: readonly Bet[] = Object.freeze([]);
+
+function migrateBet(raw: unknown): Bet | null {
+  if (!raw || typeof raw !== "object") return null;
+  const b = raw as Partial<Bet> & { sport?: unknown };
+  if (typeof b.id !== "string") return null;
+  return {
+    ...(b as Bet),
+    sport: isSport(b.sport) ? b.sport : DEFAULT_SPORT,
+  };
+}
 
 function loadBets(userId: string): Bet[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_BETS as Bet[];
   const raw = window.localStorage.getItem(betsStorageKey(userId));
-  if (!raw) return [];
+  if (!raw) return EMPTY_BETS as Bet[];
   try {
-    const parsed = JSON.parse(raw) as Bet[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return EMPTY_BETS as Bet[];
+    const migrated: Bet[] = [];
+    for (const entry of parsed) {
+      const bet = migrateBet(entry);
+      if (bet) migrated.push(bet);
+    }
+    return migrated;
   } catch {
-    return [];
+    return EMPTY_BETS as Bet[];
   }
 }
 
@@ -43,55 +62,91 @@ function saveBets(userId: string, bets: Bet[]) {
   window.localStorage.setItem(betsStorageKey(userId), JSON.stringify(bets));
 }
 
+const listeners = new Set<() => void>();
+const cachedByUser = new Map<string, Bet[]>();
+
+function notify(userId?: string) {
+  if (userId) cachedByUser.delete(userId);
+  else cachedByUser.clear();
+  for (const l of listeners) l();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (!e.key) return;
+    if (e.key.startsWith(BETS_KEY_PREFIX)) notify();
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", onStorage);
+  }
+  return () => {
+    listeners.delete(listener);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", onStorage);
+    }
+  };
+}
+
+function getSnapshotFor(userId: string): Bet[] {
+  const cached = cachedByUser.get(userId);
+  if (cached) return cached;
+  const fresh = loadBets(userId);
+  cachedByUser.set(userId, fresh);
+  return fresh;
+}
+
+function getServerSnapshot(): Bet[] {
+  return EMPTY_BETS as Bet[];
+}
+
 export function BetsProvider({ children }: { children: ReactNode }) {
   const { user } = useDevUser();
   const userId = user.id;
-  const [bets, setBets] = useState<Bet[]>([]);
-
-  useEffect(() => {
-    setBets(loadBets(userId));
-  }, [userId]);
+  const getSnapshot = useCallback(() => getSnapshotFor(userId), [userId]);
+  const bets = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const addBet = useCallback(
     (bet: Bet) => {
-      setBets((prev) => {
-        const next = [bet, ...prev];
-        saveBets(userId, next);
-        return next;
-      });
+      const next = [bet, ...getSnapshotFor(userId)];
+      saveBets(userId, next);
+      notify(userId);
     },
     [userId],
   );
 
   const removeBet = useCallback(
     (id: string) => {
-      setBets((prev) => {
-        const next = prev.filter((b) => b.id !== id);
-        saveBets(userId, next);
-        return next;
-      });
+      const next = getSnapshotFor(userId).filter((b) => b.id !== id);
+      saveBets(userId, next);
+      notify(userId);
     },
     [userId],
   );
 
   const updateBet = useCallback(
     (id: string, patch: Partial<Bet>) => {
-      setBets((prev) => {
-        const next = prev.map((b) => (b.id === id ? { ...b, ...patch } : b));
-        saveBets(userId, next);
-        return next;
-      });
+      const next = getSnapshotFor(userId).map((b) =>
+        b.id === id ? { ...b, ...patch } : b,
+      );
+      saveBets(userId, next);
+      notify(userId);
     },
     [userId],
   );
 
   const clearBets = useCallback(() => {
-    setBets([]);
     saveBets(userId, []);
+    notify(userId);
   }, [userId]);
 
-  const openBets = bets.filter((b) => b.status === "open");
-  const settledBets = bets.filter((b) => b.status === "settled");
+  const { openBets, settledBets } = useMemo(
+    () => ({
+      openBets: bets.filter((b) => b.status === "open"),
+      settledBets: bets.filter((b) => b.status === "settled"),
+    }),
+    [bets],
+  );
 
   return (
     <Ctx.Provider

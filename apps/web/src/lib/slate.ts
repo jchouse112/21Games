@@ -4,6 +4,14 @@ import {
   fetchPitcherStatsMap,
   formatPitcherName,
 } from "./mlb";
+import {
+  displayNhlTeamName,
+  fetchNhlGoaliesByTeam,
+  fetchNhlSchedule,
+  fetchNhlTeamsMap,
+  pickScheduledDay,
+  type NhlGoalie,
+} from "./nhl";
 
 export type TeamEntry = {
   id: number;
@@ -25,6 +33,27 @@ export type SlateGame = {
 export type Slate = {
   date: string;
   games: SlateGame[];
+};
+
+export type NhlTeamEntry = {
+  id: number;
+  abbr: string;
+  name: string;
+  goalies: NhlGoalie[];
+};
+
+export type NhlSlateGame = {
+  id: string;
+  startsAtIso: string;
+  timeLabel: string;
+  venue: string;
+  away: NhlTeamEntry;
+  home: NhlTeamEntry;
+};
+
+export type NhlSlate = {
+  date: string;
+  games: NhlSlateGame[];
 };
 
 export function getTodayIsoDateEt(): string {
@@ -96,6 +125,50 @@ export async function getTodaySlate(date?: string): Promise<Slate> {
           name: homeTeam.name,
           pitcher: formatPitcherName(g.teams.home.probablePitcher),
           era: homePid ? pitcherStats.get(homePid)?.displayEra ?? null : null,
+        },
+      };
+    })
+    .sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso));
+
+  return { date: isoDate, games };
+}
+
+
+export async function getTodayNhlSlate(date?: string): Promise<NhlSlate> {
+  const isoDate = date ?? getTodayIsoDateEt();
+  const [schedule, teamsMap, goaliesByTeam] = await Promise.all([
+    fetchNhlSchedule(isoDate),
+    fetchNhlTeamsMap(),
+    fetchNhlGoaliesByTeam().catch(() => new Map<string, NhlGoalie[]>()),
+  ]);
+
+  const rawGames = pickScheduledDay(schedule, isoDate);
+  const eligibleGames = rawGames.filter((g) => {
+    if (g.gameScheduleState && g.gameScheduleState !== "OK") return false;
+    return teamsMap.has(g.awayTeam.id) && teamsMap.has(g.homeTeam.id);
+  });
+
+  const games: NhlSlateGame[] = eligibleGames
+    .map((g) => {
+      const awayTeam = teamsMap.get(g.awayTeam.id)!;
+      const homeTeam = teamsMap.get(g.homeTeam.id)!;
+      const startsAtIso = g.startTimeUTC;
+      return {
+        id: String(g.id),
+        startsAtIso,
+        timeLabel: formatEtTime(startsAtIso),
+        venue: g.venue?.default ?? "",
+        away: {
+          id: awayTeam.id,
+          abbr: awayTeam.abbr,
+          name: displayNhlTeamName(g.awayTeam) || awayTeam.name,
+          goalies: goaliesByTeam.get(awayTeam.abbr) ?? [],
+        },
+        home: {
+          id: homeTeam.id,
+          abbr: homeTeam.abbr,
+          name: displayNhlTeamName(g.homeTeam) || homeTeam.name,
+          goalies: goaliesByTeam.get(homeTeam.abbr) ?? [],
         },
       };
     })

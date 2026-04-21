@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { useBets } from "@/lib/use-bets";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
-import { handProbabilities, payoutForTotal, ZONE_LOW, TARGET } from "@/lib/odds";
+import {
+  handProbabilities,
+  lambdaFor,
+  payoutForTotal,
+  ZONE_LOW,
+  TARGET,
+} from "@/lib/odds";
 import {
   buildMockRunsMap,
   computeBetProgress,
@@ -13,16 +19,17 @@ import {
   type TeamScore,
 } from "@/lib/settlement";
 import type { Bet } from "@/lib/bets";
+import { scoreKey, type Sport } from "@/lib/sport";
 
 export function ActiveBets() {
   const { openBets, removeBet, updateBet } = useBets();
   const { state, updateBalance } = useDevUser();
 
-  const dates = useMemo(
-    () => Array.from(new Set(openBets.map((b) => b.slateDate))),
+  const targets = useMemo(
+    () => openBets.map((b) => ({ sport: b.sport, date: b.slateDate })),
     [openBets],
   );
-  const { runsByDate, lastUpdated, refresh } = useLiveScores(dates);
+  const { runsBySportDate, lastUpdated, refresh } = useLiveScores(targets);
 
   if (openBets.length === 0) return null;
 
@@ -73,7 +80,10 @@ export function ActiveBets() {
           <BetRow
             key={bet.id}
             bet={bet}
-            runs={runsByDate.get(bet.slateDate) ?? new Map()}
+            runs={
+              runsBySportDate.get(scoreKey(bet.sport, bet.slateDate)) ??
+              new Map()
+            }
             onCancel={() => cancel(bet)}
             onSettle={(runs) => settle(bet, runs)}
           />
@@ -94,7 +104,8 @@ function BetRow({
   onCancel: () => void;
   onSettle: (runs: RunsMap) => void;
 }) {
-  const probs = handProbabilities(bet.teams.length);
+  const lambda = lambdaFor(bet.sport);
+  const probs = handProbabilities(bet.teams.length, lambda);
   const progress = computeBetProgress(bet, runs);
   const placed = new Date(bet.createdAt).toLocaleTimeString(undefined, {
     hour: "numeric",
@@ -115,7 +126,7 @@ function BetRow({
   const livePayout = progress.allVoided
     ? bet.stake
     : inZone
-      ? payoutForTotal(bet.teams.length, progress.liveTotal, bet.stake)
+      ? payoutForTotal(bet.teams.length, progress.liveTotal, bet.stake, lambda)
       : 0;
   const payoutTint = progress.allVoided
     ? "text-zinc-200"
@@ -139,7 +150,8 @@ function BetRow({
     <li className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <SportBadge sport={bet.sport} />
             {bet.teams.map((t) => {
               const s = progress.perTeam.find((p) => p.teamId === t.id)?.score ?? null;
               return <TeamChip key={t.id} abbr={t.abbr} score={s} />;
@@ -194,6 +206,20 @@ function BetRow({
         </div>
       </div>
     </li>
+  );
+}
+
+function SportBadge({ sport }: { sport: Sport }) {
+  const cls =
+    sport === "nhl"
+      ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
+      : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+  return (
+    <span
+      className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${cls}`}
+    >
+      {sport}
+    </span>
   );
 }
 

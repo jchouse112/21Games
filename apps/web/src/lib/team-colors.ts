@@ -1,4 +1,6 @@
-const TEAM_COLORS: Record<string, string> = {
+import type { Sport } from "./sport";
+
+const MLB_TEAM_COLORS: Record<string, string> = {
   ARI: "bg-red-900",
   ATL: "bg-red-800",
   BAL: "bg-orange-600",
@@ -32,6 +34,42 @@ const TEAM_COLORS: Record<string, string> = {
   WSH: "bg-red-700",
 };
 
-export function getTeamColor(abbr: string): string {
-  return TEAM_COLORS[abbr] ?? "bg-zinc-800";
+const NHL_TEAM_COLORS: Record<string, string> = {
+  ANA: "bg-orange-600",
+  BOS: "bg-amber-500",
+  BUF: "bg-blue-800",
+  CAR: "bg-red-700",
+  CBJ: "bg-blue-900",
+  CGY: "bg-red-700",
+  CHI: "bg-red-800",
+  COL: "bg-red-900",
+  DAL: "bg-green-700",
+  DET: "bg-red-700",
+  EDM: "bg-orange-600",
+  FLA: "bg-red-800",
+  LAK: "bg-zinc-800",
+  MIN: "bg-green-800",
+  MTL: "bg-red-700",
+  NJD: "bg-red-700",
+  NSH: "bg-amber-500",
+  NYI: "bg-blue-700",
+  NYR: "bg-blue-700",
+  OTT: "bg-red-800",
+  PHI: "bg-orange-600",
+  PIT: "bg-zinc-900",
+  SEA: "bg-cyan-900",
+  SJS: "bg-teal-700",
+  STL: "bg-blue-700",
+  TBL: "bg-blue-800",
+  TOR: "bg-blue-800",
+  UTA: "bg-zinc-900",
+  VAN: "bg-blue-800",
+  VGK: "bg-amber-600",
+  WPG: "bg-blue-900",
+  WSH: "bg-red-700",
+};
+
+export function getTeamColor(abbr: string, sport: Sport = "mlb"): string {
+  const map = sport === "nhl" ? NHL_TEAM_COLORS : MLB_TEAM_COLORS;
+  return map[abbr] ?? "bg-zinc-800";
 }

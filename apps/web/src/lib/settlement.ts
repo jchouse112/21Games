@@ -1,6 +1,7 @@
 import type { ScheduleResponse } from "./mlb";
+import type { NhlScoreResponse } from "./nhl";
 import type { Bet } from "./bets";
-import { settleBet as settleBetOdds, type Outcome } from "./odds";
+import { lambdaFor, settleBet as settleBetOdds, type Outcome } from "./odds";
 
 export type GameStatus = "scheduled" | "live" | "final" | "voided";
 
@@ -12,6 +13,8 @@ export type TeamScore = {
   inning: number | null;
   inningOrdinal: string | null;
   inningHalf: string | null;
+  period?: number | null;
+  periodClock?: string | null;
 };
 
 export type RunsMap = Map<number, TeamScore>;
@@ -124,7 +127,12 @@ export function deriveSettlement(bet: Bet, runs: RunsMap): SettlementResult {
   if (p.allVoided) {
     return { kind: "refund", reason: "all-voided", payout: bet.stake };
   }
-  const outcome = settleBetOdds(bet.teams.length, p.liveTotal, bet.stake);
+  const outcome = settleBetOdds(
+    bet.teams.length,
+    p.liveTotal,
+    bet.stake,
+    lambdaFor(bet.sport),
+  );
   return { kind: "settled", outcome };
 }
 
@@ -143,3 +151,63 @@ export function buildMockRunsMap(bet: Bet, perTeamRuns: Record<number, number>):
   }
   return map;
 }
+
+
+export function classifyNhlStatus(
+  gameState?: string,
+  scheduleState?: string,
+): GameStatus {
+  const sched = (scheduleState ?? "").toUpperCase();
+  if (sched === "PPD" || sched === "CNCL" || sched === "SUSP") {
+    return "voided";
+  }
+  const g = (gameState ?? "").toUpperCase();
+  if (g === "OFF" || g === "FINAL") return "final";
+  if (g === "LIVE" || g === "CRIT") return "live";
+  return "scheduled";
+}
+
+function periodOrdinal(n: number | null): string | null {
+  if (n === null) return null;
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  if (n === 4) return "OT";
+  if (n === 5) return "SO";
+  return `${n}th`;
+}
+
+export function extractGoalsMap(score: NhlScoreResponse): RunsMap {
+  const map: RunsMap = new Map();
+  const games = score.games ?? [];
+  for (const g of games) {
+    const status = classifyNhlStatus(g.gameState, g.gameScheduleState);
+    const period = g.periodDescriptor?.number ?? null;
+    const clock = g.clock?.timeRemaining ?? null;
+    const isPlayed = status === "live" || status === "final";
+    const awayGoals = isPlayed ? (g.awayTeam.score ?? 0) : 0;
+    const homeGoals = isPlayed ? (g.homeTeam.score ?? 0) : 0;
+    const common = {
+      gamePk: g.id,
+      status,
+      inning: null,
+      inningOrdinal: null,
+      inningHalf: null,
+      period,
+      periodClock: clock,
+    };
+    map.set(g.awayTeam.id, {
+      teamId: g.awayTeam.id,
+      runs: awayGoals,
+      ...common,
+    });
+    map.set(g.homeTeam.id, {
+      teamId: g.homeTeam.id,
+      runs: homeGoals,
+      ...common,
+    });
+  }
+  return map;
+}
+
+export { periodOrdinal as formatNhlPeriodOrdinal };

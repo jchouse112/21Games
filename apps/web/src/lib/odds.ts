@@ -1,4 +1,13 @@
-export const LAMBDA = 4.6;
+import type { Sport } from "./sport";
+
+export const LAMBDA_MLB = 4.6;
+export const LAMBDA_NHL = 3.0;
+export const LAMBDA = LAMBDA_MLB;
+
+export function lambdaFor(sport: Sport): number {
+  return sport === "nhl" ? LAMBDA_NHL : LAMBDA_MLB;
+}
+
 export const TARGET = 21;
 export const ZONE_LOW = 15;
 export const MIN_TEAMS = 3;
@@ -43,8 +52,11 @@ export function poissonPmf(k: number, lambda: number): number {
   return Math.exp(logPmf);
 }
 
-export function calibratedOdds(nTeams: number): number {
-  const lam = LAMBDA * nTeams;
+export function calibratedOdds(
+  nTeams: number,
+  lambda: number = LAMBDA_MLB,
+): number {
+  const lam = lambda * nTeams;
   let weighted = 0;
   for (let t = ZONE_LOW; t <= TARGET; t += 1) {
     const p = poissonPmf(t, lam);
@@ -63,9 +75,10 @@ export function payoutForTotal(
   nTeams: number,
   total: number,
   stake: number,
+  lambda: number = LAMBDA_MLB,
 ): number {
   if (total < ZONE_LOW || total > TARGET) return 0;
-  const odds = calibratedOdds(nTeams);
+  const odds = calibratedOdds(nTeams, lambda);
   const w = BASE_POINTS[total]! / TARGET;
   const b = total === TARGET ? BJ_BONUS : 1;
   let raw = stake * odds * w * b;
@@ -73,13 +86,17 @@ export function payoutForTotal(
   return Math.min(raw, payoutCap(stake));
 }
 
-export function previewTable(nTeams: number, stake: number): PayoutRow[] {
+export function previewTable(
+  nTeams: number,
+  stake: number,
+  lambda: number = LAMBDA_MLB,
+): PayoutRow[] {
   const rows: PayoutRow[] = [];
   for (let t = ZONE_LOW; t <= TARGET; t += 1) {
     rows.push({
       total: t,
       basePoints: BASE_POINTS[t]!,
-      payout: payoutForTotal(nTeams, t, stake),
+      payout: payoutForTotal(nTeams, t, stake, lambda),
       isBj: t === TARGET,
     });
   }
@@ -90,6 +107,7 @@ export function settleBet(
   nTeams: number,
   total: number,
   stake: number,
+  lambda: number = LAMBDA_MLB,
 ): Outcome {
   if (total > TARGET) {
     return { status: "bust", total, basePoints: 0, payout: 0 };
@@ -97,7 +115,7 @@ export function settleBet(
   if (total < ZONE_LOW) {
     return { status: "short", total, basePoints: 0, payout: 0 };
   }
-  const payout = payoutForTotal(nTeams, total, stake);
+  const payout = payoutForTotal(nTeams, total, stake, lambda);
   return {
     status: total === TARGET ? "bj" : "win",
     total,
@@ -106,13 +124,16 @@ export function settleBet(
   };
 }
 
-export function handProbabilities(nTeams: number): {
+export function handProbabilities(
+  nTeams: number,
+  lambda: number = LAMBDA_MLB,
+): {
   pZone: number;
   pBj: number;
   pBust: number;
   pShort: number;
 } {
-  const lam = LAMBDA * nTeams;
+  const lam = lambda * nTeams;
   let pShort = 0;
   for (let t = 0; t < ZONE_LOW; t += 1) pShort += poissonPmf(t, lam);
   let pZone = 0;

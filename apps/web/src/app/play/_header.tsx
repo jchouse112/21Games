@@ -6,14 +6,19 @@ import { DEV_USERS, getTier } from "@/lib/dev-users";
 import { useDevUser } from "@/lib/use-dev-user";
 
 const TABS = [
-  { href: "/play", label: "Bet" },
-  { href: "/play/my-bets", label: "My Bets" },
+  { href: "/play/mlb", label: "Bet", match: ["/play/mlb", "/play/nhl"] },
+  { href: "/play/my-bets", label: "My Bets", match: ["/play/my-bets"] },
+] as const;
+
+const SPORT_PILLS = [
+  { href: "/play/mlb", label: "MLB" },
+  { href: "/play/nhl", label: "NHL" },
 ] as const;
 
 export function PlayHeader() {
   const { user, state, setUserId } = useDevUser();
   const tier = getTier(state.balance);
-  const pathname = usePathname() ?? "/play";
+  const pathname = usePathname() ?? "/play/mlb";
 
   return (
     <header className="border-b border-zinc-800 px-6 py-4">
@@ -27,10 +32,7 @@ export function PlayHeader() {
           </Link>
           <nav className="flex items-center gap-1" aria-label="Primary">
             {TABS.map((tab) => {
-              const active =
-                tab.href === "/play"
-                  ? pathname === "/play"
-                  : pathname.startsWith(tab.href);
+              const active = tab.match.some((m) => pathname.startsWith(m));
               return (
                 <Link
                   key={tab.href}
@@ -47,6 +49,33 @@ export function PlayHeader() {
               );
             })}
           </nav>
+          {(pathname.startsWith("/play/mlb") ||
+            pathname.startsWith("/play/nhl")) && (
+            <div
+              role="tablist"
+              aria-label="Sport"
+              className="flex items-center rounded-full border border-zinc-800 bg-zinc-900 p-0.5"
+            >
+              {SPORT_PILLS.map((pill) => {
+                const active = pathname.startsWith(pill.href);
+                return (
+                  <Link
+                    key={pill.href}
+                    href={pill.href}
+                    role="tab"
+                    aria-selected={active}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
+                      active
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : "text-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {pill.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-6">
           <div className="hidden flex-col items-end sm:flex">

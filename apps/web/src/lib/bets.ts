@@ -1,3 +1,5 @@
+import type { Sport } from "./sport";
+
 export type BetStatus = "open" | "settled";
 
 export type BetTeam = {
@@ -10,6 +12,7 @@ export type BetTeam = {
 export type Bet = {
   id: string;
   userId: string;
+  sport: Sport;
   slateDate: string;
   teams: BetTeam[];
   stake: number;
