@@ -111,6 +111,9 @@ function BetRow({
     minute: "2-digit",
   });
   const canSettle = progress.allFinalOrVoided;
+  const anyGameStarted = progress.perTeam.some(
+    (p) => p.score != null && p.score.status !== "scheduled",
+  );
   const totalLabel = `${progress.liveTotal} / 21`;
   const totalTint =
     progress.liveTotal > 21
@@ -191,6 +194,13 @@ function BetRow({
               >
                 Settle
               </button>
+            ) : anyGameStarted ? (
+              <span
+                className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500"
+                title="Cancel disabled once any game in the bet has started"
+              >
+                Locked
+              </span>
             ) : (
               <button
                 type="button"
