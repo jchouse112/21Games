@@ -103,7 +103,7 @@ export default function Home() {
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
         <div aria-hidden="true" className="absolute inset-0 md:hidden">
           <Image
-            src="/hero-crowd.png"
+            src="/hero-crowd.jpg"
             alt=""
             fill
             priority
@@ -114,7 +114,7 @@ export default function Home() {
         </div>
         <div aria-hidden="true" className="absolute inset-0 hidden md:block">
           <Image
-            src="/hero-crowd-wide.png"
+            src="/hero-crowd-wide.jpg"
             alt=""
             fill
             priority
