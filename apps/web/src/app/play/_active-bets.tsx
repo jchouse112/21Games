@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useBets } from "@/lib/use-bets";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
@@ -12,7 +12,6 @@ import {
   TARGET,
 } from "@/lib/odds";
 import {
-  buildMockRunsMap,
   computeBetProgress,
   deriveSettlement,
   type RunsMap,
@@ -201,7 +200,6 @@ function BetRow({
                 Cancel
               </button>
             )}
-            <MockSettleButton bet={bet} onSettle={onSettle} />
           </div>
         </div>
       </div>
@@ -262,81 +260,5 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
         </span>
       ) : null}
     </span>
-  );
-}
-
-function MockSettleButton({
-  bet,
-  onSettle,
-}: {
-  bet: Bet;
-  onSettle: (runs: RunsMap) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<Record<number, string>>(() =>
-    Object.fromEntries(bet.teams.map((t) => [t.id, ""])),
-  );
-
-  function apply() {
-    const perTeam: Record<number, number> = {};
-    for (const t of bet.teams) {
-      const v = Number(values[t.id] ?? "0");
-      perTeam[t.id] = Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
-    }
-    onSettle(buildMockRunsMap(bet, perTeam));
-    setOpen(false);
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md border border-dashed border-zinc-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 hover:border-amber-400/50 hover:text-amber-200"
-      >
-        Dev · force settle
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2">
-      <div className="mb-2 font-mono text-[9px] uppercase tracking-[0.2em] text-amber-200">
-        Mock runs
-      </div>
-      <div className="space-y-1">
-        {bet.teams.map((t) => (
-          <label key={t.id} className="flex items-center gap-2 text-xs text-zinc-300">
-            <span className="w-10 font-mono">{t.abbr}</span>
-            <input
-              type="number"
-              min={0}
-              max={30}
-              value={values[t.id] ?? ""}
-              onChange={(e) =>
-                setValues((v) => ({ ...v, [t.id]: e.target.value }))
-              }
-              className="w-14 rounded border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-right"
-            />
-          </label>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-1.5">
-        <button
-          type="button"
-          onClick={apply}
-          className="flex-1 rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-500/20"
-        >
-          Settle
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
   );
 }
