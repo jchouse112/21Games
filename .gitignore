@@ -42,5 +42,8 @@ Thumbs.db
 # Local agent / AI tool settings
 .claude/settings.local.json
 
+# Local working folder for unoptimized source images
+/Images/
+
 # Vercel
 .vercel/
