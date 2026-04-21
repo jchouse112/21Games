@@ -64,7 +64,7 @@ export function ActiveBets() {
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
             {openBets.length} active
-            {lastUpdated && ` Â· updated ${new Date(lastUpdated).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+            {lastUpdated && ` · updated ${new Date(lastUpdated).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
           </span>
           <button
             type="button"
@@ -158,7 +158,7 @@ function BetRow({
             })}
           </div>
           <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            {bet.teams.length} teams Â· placed {placed} Â· win {(probs.pZone * 100).toFixed(0)}% Â· bj {(probs.pBj * 100).toFixed(1)}%
+            {bet.teams.length} teams · placed {placed} · win {(probs.pZone * 100).toFixed(0)}% · bj {(probs.pBj * 100).toFixed(1)}%
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -230,7 +230,7 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
     return (
       <span className={`${base} border-zinc-700 bg-zinc-900 text-zinc-300`}>
         <span>{abbr}</span>
-        <span className="text-zinc-500">â€”</span>
+        <span className="text-zinc-500">—</span>
       </span>
     );
   }
@@ -248,7 +248,7 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
       : "border-amber-400/40 bg-amber-400/10 text-amber-100";
   const liveSuffix =
     score.status === "live" && score.inningOrdinal
-      ? ` ${score.inningHalf === "Top" ? "â–²" : "â–¼"}${score.inning ?? ""}`
+      ? ` ${score.inningHalf === "Top" ? "▲" : "▼"}${score.inning ?? ""}`
       : "";
   return (
     <span className={`${base} ${color}`} title={score.status === "live" ? `${score.inningOrdinal ?? ""} ${score.inningHalf ?? ""}`.trim() : score.status}>
@@ -294,7 +294,7 @@ function MockSettleButton({
         onClick={() => setOpen(true)}
         className="rounded-md border border-dashed border-zinc-700 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 hover:border-amber-400/50 hover:text-amber-200"
       >
-        Dev Â· force settle
+        Dev · force settle
       </button>
     );
   }
