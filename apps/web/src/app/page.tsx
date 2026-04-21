@@ -33,7 +33,7 @@ const SPORTS: Array<{
   { name: "Ice 21", metric: "Goals", status: "Live", featured: true, icon: "puck", href: "/play/nhl" },
   { name: "Hoops 21", metric: "3-pointers", status: "Coming soon", featured: false, icon: "basketball" },
   { name: "Gridiron 21", metric: "Touchdowns", status: "Coming soon", featured: false, icon: "football" },
-  { name: "Pitch 21", metric: "Goals", status: "Coming soon", featured: false, icon: "soccer" },
+  { name: "Pitch 9", metric: "Goals", status: "Coming soon", featured: false, icon: "soccer" },
 ];
 
 function SportGlyph({ icon, className }: { icon: SportIcon; className?: string }) {
