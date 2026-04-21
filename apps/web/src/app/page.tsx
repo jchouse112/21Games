@@ -26,9 +26,10 @@ const SPORTS: Array<{
   status: string;
   featured: boolean;
   icon: SportIcon;
+  href?: string;
 }> = [
-  { name: "Baseball 21", metric: "Runs", status: "Live", featured: true, icon: "baseball" },
-  { name: "Ice 21", metric: "Goals", status: "Live", featured: true, icon: "puck" },
+  { name: "Baseball 21", metric: "Runs", status: "Live", featured: true, icon: "baseball", href: "/play/mlb" },
+  { name: "Ice 21", metric: "Goals", status: "Live", featured: true, icon: "puck", href: "/play/nhl" },
   { name: "Hoops 21", metric: "3-pointers", status: "Coming soon", featured: false, icon: "basketball" },
   { name: "Gridiron 21", metric: "Touchdowns", status: "Coming soon", featured: false, icon: "football" },
   { name: "Pitch 21", metric: "Goals", status: "Coming soon", featured: false, icon: "soccer" },
@@ -147,37 +148,52 @@ export default function Home() {
           <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">The lineup</h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-zinc-400">Five sports. One target. 21.</p>
           <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {SPORTS.map((sport) => (
-              <div
-                key={sport.name}
-                className={
-                  "flex flex-col gap-3 rounded-xl border p-6 " +
-                  (sport.featured
-                    ? "border-emerald-400/40 bg-emerald-400/5"
-                    : "border-zinc-800 bg-zinc-900/40")
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <SportGlyph
-                    icon={sport.icon}
-                    className={
-                      "h-8 w-8 " +
-                      (sport.featured ? "text-emerald-400" : "text-zinc-500")
-                    }
-                  />
-                  <span
-                    className={
-                      "font-mono text-xs uppercase tracking-[0.2em] " +
-                      (sport.featured ? "text-emerald-400" : "text-zinc-500")
-                    }
-                  >
-                    {sport.status}
-                  </span>
+            {SPORTS.map((sport) => {
+              const baseClasses =
+                "flex flex-col gap-3 rounded-xl border p-6 " +
+                (sport.featured
+                  ? "border-emerald-400/40 bg-emerald-400/5"
+                  : "border-zinc-800 bg-zinc-900/40");
+              const interactiveClasses = sport.href
+                ? " transition hover:border-emerald-400 hover:bg-emerald-400/10"
+                : "";
+              const content = (
+                <>
+                  <div className="flex items-center justify-between">
+                    <SportGlyph
+                      icon={sport.icon}
+                      className={
+                        "h-8 w-8 " +
+                        (sport.featured ? "text-emerald-400" : "text-zinc-500")
+                      }
+                    />
+                    <span
+                      className={
+                        "font-mono text-xs uppercase tracking-[0.2em] " +
+                        (sport.featured ? "text-emerald-400" : "text-zinc-500")
+                      }
+                    >
+                      {sport.status}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-semibold">{sport.name}</h3>
+                  <p className="text-sm text-zinc-400">{sport.metric}</p>
+                </>
+              );
+              return sport.href ? (
+                <Link
+                  key={sport.name}
+                  href={sport.href}
+                  className={baseClasses + interactiveClasses}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={sport.name} className={baseClasses}>
+                  {content}
                 </div>
-                <h3 className="text-xl font-semibold">{sport.name}</h3>
-                <p className="text-sm text-zinc-400">{sport.metric}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
