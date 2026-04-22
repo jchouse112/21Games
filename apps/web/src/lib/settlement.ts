@@ -125,15 +125,22 @@ export type SettlementResult =
 export function deriveSettlement(bet: Bet, runs: RunsMap): SettlementResult {
   const p = computeBetProgress(bet, runs);
   if (p.allVoided) {
-    return { kind: "refund", reason: "all-voided", payout: bet.stake };
+    return { kind: "refund", reason: "all-voided", payout: bet.baseStake };
   }
   const outcome = settleBetOdds(
     bet.teams.length,
     p.liveTotal,
-    bet.stake,
+    bet.baseStake,
     lambdaFor(bet.sport),
+    bet.stake,
   );
   return { kind: "settled", outcome };
+}
+
+export function deriveInstantBust(bet: Bet, runs: RunsMap): Outcome | null {
+  const p = computeBetProgress(bet, runs);
+  if (p.liveTotal < 22) return null;
+  return { status: "bust", total: p.liveTotal, basePoints: 0, payout: 0 };
 }
 
 export function buildMockRunsMap(bet: Bet, perTeamRuns: Record<number, number>): RunsMap {

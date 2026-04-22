@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBets } from "@/lib/use-bets";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
+import { useClock } from "@/lib/use-clock";
 import {
+  HIT_COST_FRAC,
+  MAX_TEAMS,
   handProbabilities,
   lambdaFor,
   payoutForTotal,
@@ -13,16 +16,20 @@ import {
 } from "@/lib/odds";
 import {
   computeBetProgress,
+  deriveInstantBust,
   deriveSettlement,
   type RunsMap,
   type TeamScore,
 } from "@/lib/settlement";
-import type { Bet } from "@/lib/bets";
+import { isHitWindowClosed } from "@/lib/hit-window";
+import type { Bet, BetTeam } from "@/lib/bets";
 import { scoreKey, type Sport } from "@/lib/sport";
+import { HitPicker } from "./_hit-picker";
 
 export function ActiveBets() {
-  const { openBets, removeBet, updateBet } = useBets();
+  const { openBets, removeBet, updateBet, addTeamToBet } = useBets();
   const { state, updateBalance } = useDevUser();
+  const [hitTarget, setHitTarget] = useState<Bet | null>(null);
 
   const targets = useMemo(
     () => openBets.map((b) => ({ sport: b.sport, date: b.slateDate })),
@@ -30,11 +37,33 @@ export function ActiveBets() {
   );
   const { runsBySportDate, lastUpdated, refresh } = useLiveScores(targets);
 
+  useEffect(() => {
+    for (const bet of openBets) {
+      const runs =
+        runsBySportDate.get(scoreKey(bet.sport, bet.slateDate)) ?? new Map();
+      const bust = deriveInstantBust(bet, runs);
+      if (bust) {
+        updateBet(bet.id, {
+          status: "settled",
+          settledAt: new Date().toISOString(),
+          outcome: bust,
+        });
+      }
+    }
+  }, [openBets, runsBySportDate, updateBet]);
+
   if (openBets.length === 0) return null;
 
   function cancel(bet: Bet) {
     updateBalance(state.balance + bet.stake);
     removeBet(bet.id);
+  }
+
+  function hit(bet: Bet, team: BetTeam) {
+    const result = addTeamToBet(bet.id, team, state.balance);
+    if (!result.ok) return result;
+    updateBalance(state.balance - result.hitCost);
+    return result;
   }
 
   function settle(bet: Bet, runs: RunsMap) {
@@ -85,9 +114,22 @@ export function ActiveBets() {
             }
             onCancel={() => cancel(bet)}
             onSettle={(runs) => settle(bet, runs)}
+            onRequestHit={() => setHitTarget(bet)}
+            balance={state.balance}
           />
         ))}
       </ul>
+      {hitTarget ? (
+        <HitPicker
+          bet={hitTarget}
+          onClose={() => setHitTarget(null)}
+          onPick={(team) => {
+            const res = hit(hitTarget, team);
+            if (res?.ok) setHitTarget(null);
+            return res;
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -97,15 +139,20 @@ function BetRow({
   runs,
   onCancel,
   onSettle,
+  onRequestHit,
+  balance,
 }: {
   bet: Bet;
   runs: RunsMap;
   onCancel: () => void;
   onSettle: (runs: RunsMap) => void;
+  onRequestHit: () => void;
+  balance: number;
 }) {
   const lambda = lambdaFor(bet.sport);
   const probs = handProbabilities(bet.teams.length, lambda);
   const progress = computeBetProgress(bet, runs);
+  const now = useClock();
   const placed = new Date(bet.createdAt).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -114,6 +161,13 @@ function BetRow({
   const anyGameStarted = progress.perTeam.some(
     (p) => p.score != null && p.score.status !== "scheduled",
   );
+  const hitClosed = isHitWindowClosed(bet, runs, now);
+  const hitCost = bet.baseStake * HIT_COST_FRAC;
+  const canHit =
+    !canSettle &&
+    bet.teams.length < MAX_TEAMS &&
+    !hitClosed &&
+    balance >= hitCost;
   const totalLabel = `${progress.liveTotal} / 21`;
   const totalTint =
     progress.liveTotal > 21
@@ -126,9 +180,15 @@ function BetRow({
   const inZone =
     progress.liveTotal >= ZONE_LOW && progress.liveTotal <= TARGET;
   const livePayout = progress.allVoided
-    ? bet.stake
+    ? bet.baseStake
     : inZone
-      ? payoutForTotal(bet.teams.length, progress.liveTotal, bet.stake, lambda)
+      ? payoutForTotal(
+          bet.teams.length,
+          progress.liveTotal,
+          bet.baseStake,
+          lambda,
+          bet.stake,
+        )
       : 0;
   const payoutTint = progress.allVoided
     ? "text-zinc-200"
@@ -138,7 +198,7 @@ function BetRow({
         ? "text-amber-200"
         : "text-zinc-600";
   const payoutLabel = progress.allVoided
-    ? `${bet.stake}`
+    ? `${bet.baseStake}`
     : inZone
       ? livePayout.toFixed(1)
       : "\u2014";
@@ -183,7 +243,15 @@ function BetRow({
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
               Stake
             </p>
-            <p className="text-lg font-semibold text-zinc-100">{bet.stake}</p>
+            <p className="text-lg font-semibold text-zinc-100">
+              {bet.stake.toFixed(bet.stake === bet.baseStake ? 0 : 2)}
+            </p>
+            {bet.hits.length > 0 ? (
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+                base {bet.baseStake} + {bet.hits.length} hit
+                {bet.hits.length === 1 ? "" : "s"}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col gap-2">
             {canSettle ? (
@@ -210,6 +278,16 @@ function BetRow({
                 Cancel
               </button>
             )}
+            {canHit ? (
+              <button
+                type="button"
+                onClick={onRequestHit}
+                className="rounded-md border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
+                title={`Add a team for +${hitCost.toFixed(2)} (25% of base)`}
+              >
+                Hit · +{hitCost.toFixed(2)}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

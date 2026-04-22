@@ -3,6 +3,7 @@ import {
   buildMockRunsMap,
   classifyStatus,
   computeBetProgress,
+  deriveInstantBust,
   deriveSettlement,
   extractRunsMap,
   type RunsMap,
@@ -24,6 +25,8 @@ function makeBet(teamIds: number[], stake = 10): Bet {
       gameId: `g-${Math.floor(i / 2) + 1}`,
     })),
     stake,
+    baseStake: stake,
+    hits: [],
     status: "open",
     createdAt: "2026-04-18T17:00:00Z",
   };
@@ -339,6 +342,52 @@ describe("deriveSettlement", () => {
       expect(result.outcome.total).toBe(14);
       expect(result.outcome.status).toBe("short");
     }
+  });
+});
+
+describe("deriveInstantBust", () => {
+  it("returns null when live total is below 22", () => {
+    const bet = makeBet([1, 2, 3], 10);
+    const runs: RunsMap = new Map([
+      [1, { teamId: 1, gamePk: 10, runs: 10, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+      [2, { teamId: 2, gamePk: 11, runs: 8, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+      [3, { teamId: 3, gamePk: 12, runs: 3, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+    ]);
+    expect(deriveInstantBust(bet, runs)).toBeNull();
+  });
+
+  it("returns a bust outcome when live total reaches 22", () => {
+    const bet = makeBet([1, 2, 3], 10);
+    const runs: RunsMap = new Map([
+      [1, { teamId: 1, gamePk: 10, runs: 10, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+      [2, { teamId: 2, gamePk: 11, runs: 9, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+      [3, { teamId: 3, gamePk: 12, runs: 3, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+    ]);
+    const result = deriveInstantBust(bet, runs);
+    expect(result).not.toBeNull();
+    expect(result?.status).toBe("bust");
+    expect(result?.total).toBe(22);
+    expect(result?.payout).toBe(0);
+  });
+
+  it("fires even when some teams are still scheduled", () => {
+    const bet = makeBet([1, 2, 3], 10);
+    const runs: RunsMap = new Map([
+      [1, { teamId: 1, gamePk: 10, runs: 15, status: "live", inning: 3, inningOrdinal: "3rd", inningHalf: "Top" }],
+      [2, { teamId: 2, gamePk: 11, runs: 7, status: "live", inning: 3, inningOrdinal: "3rd", inningHalf: "Top" }],
+    ]);
+    const result = deriveInstantBust(bet, runs);
+    expect(result?.status).toBe("bust");
+    expect(result?.total).toBe(22);
+  });
+
+  it("ignores voided teams when summing the live total", () => {
+    const bet = makeBet([1, 2], 10);
+    const runs: RunsMap = new Map([
+      [1, { teamId: 1, gamePk: 10, runs: 22, status: "voided", inning: null, inningOrdinal: null, inningHalf: null }],
+      [2, { teamId: 2, gamePk: 11, runs: 5, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
+    ]);
+    expect(deriveInstantBust(bet, runs)).toBeNull();
   });
 });
 

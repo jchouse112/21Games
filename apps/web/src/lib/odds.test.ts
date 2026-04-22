@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   calibratedOdds,
+  committedRatio,
+  compensatedHold,
   handProbabilities,
+  HIT_COST_FRAC,
   LAMBDA_MLB,
   LAMBDA_NHL,
   lambdaFor,
@@ -9,6 +12,8 @@ import {
   previewTable,
   settleBet,
   TARGET,
+  TARGET_HOLD,
+  ZONE_LOW,
 } from "./odds";
 
 describe("lambda constants", () => {
@@ -74,5 +79,89 @@ describe("NHL lambda behavior", () => {
     expect(settleBet(4, 22, 10, LAMBDA_NHL).status).toBe("bust");
     expect(settleBet(4, 21, 10, LAMBDA_NHL).status).toBe("bj");
     expect(settleBet(4, 18, 10, LAMBDA_NHL).status).toBe("win");
+  });
+});
+
+describe("committedRatio", () => {
+  it("returns 1 when there are no hits", () => {
+    expect(committedRatio(0)).toBe(1);
+  });
+
+  it("grows by HIT_COST_FRAC per hit", () => {
+    expect(committedRatio(1)).toBeCloseTo(1 + HIT_COST_FRAC, 12);
+    expect(committedRatio(2)).toBeCloseTo(1 + 2 * HIT_COST_FRAC, 12);
+    expect(committedRatio(3)).toBeCloseTo(1 + 3 * HIT_COST_FRAC, 12);
+  });
+
+  it("clamps negative hit counts to zero", () => {
+    expect(committedRatio(-1)).toBe(1);
+    expect(committedRatio(-5)).toBe(1);
+  });
+});
+
+describe("compensatedHold", () => {
+  it("equals TARGET_HOLD at ratio 1 (no hits)", () => {
+    expect(compensatedHold(1)).toBeCloseTo(TARGET_HOLD, 12);
+  });
+
+  it("rises monotonically as committed stake grows relative to base", () => {
+    const h0 = compensatedHold(1);
+    const h1 = compensatedHold(1.25);
+    const h2 = compensatedHold(1.5);
+    const h3 = compensatedHold(1.75);
+    expect(h1).toBeGreaterThan(h0);
+    expect(h2).toBeGreaterThan(h1);
+    expect(h3).toBeGreaterThan(h2);
+  });
+
+  it("keeps expected payout-per-base constant across hit counts", () => {
+    // Expected payout per committed dollar = (1 - hold); per base dollar =
+    // ratio * (1 - hold). With compensated hold this must equal (1 - TARGET_HOLD).
+    for (const hits of [0, 1, 2, 3, 4]) {
+      const r = committedRatio(hits);
+      const h = compensatedHold(r);
+      expect(r * (1 - h)).toBeCloseTo(1 - TARGET_HOLD, 12);
+    }
+  });
+
+  it("falls back to TARGET_HOLD for non-positive ratios", () => {
+    expect(compensatedHold(0)).toBe(TARGET_HOLD);
+    expect(compensatedHold(-1)).toBe(TARGET_HOLD);
+  });
+});
+
+describe("payoutForTotal with committed stake (post-HIT reprice)", () => {
+  it("matches base payout when no hits have occurred", () => {
+    const base = payoutForTotal(4, 18, 10, LAMBDA_MLB);
+    const same = payoutForTotal(4, 18, 10, LAMBDA_MLB, 10);
+    expect(same).toBe(base);
+  });
+
+  it("keeps payout per base stake constant across hit counts (vig offsets stake growth)", () => {
+    const n = 4;
+    const base = 10;
+    const total = 18;
+    const lam = LAMBDA_MLB;
+    const p0 = payoutForTotal(n, total, base, lam, base);
+    for (const hits of [1, 2, 3]) {
+      const committed = base * (1 + HIT_COST_FRAC * hits);
+      const p = payoutForTotal(n, total, base, lam, committed);
+      expect(p).toBeCloseTo(p0, 10);
+    }
+  });
+
+  it("respects the 20x base / $2500 global cap regardless of committed stake", () => {
+    const base = 200;
+    const committed = base * (1 + HIT_COST_FRAC * 3); // 350
+    const payout = payoutForTotal(3, TARGET, base, LAMBDA_MLB, committed);
+    expect(payout).toBeLessThanOrEqual(Math.min(base * 20, 2500));
+  });
+
+  it("keeps the 15-run floor anchored to committed stake", () => {
+    const base = 10;
+    const committed = base * (1 + HIT_COST_FRAC * 2); // 15
+    const payout = payoutForTotal(6, ZONE_LOW, base, LAMBDA_MLB, committed);
+    // Floor guarantees 0.75 * committedStake at exactly 15.
+    expect(payout).toBeGreaterThanOrEqual(committed * 0.75 - 1e-9);
   });
 });

@@ -15,6 +15,7 @@ import {
   previewTable,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
+import { computeHitWindowCloseAtIso } from "@/lib/hit-window";
 import type {
   NhlSlate,
   NhlSlateGame,
@@ -137,6 +138,7 @@ export function BetForm({
   function togglePick(team: AnyTeamEntry, gameId: string) {
     if (lockedTeamIds.has(team.id)) return;
     if (startedTeamIds.has(team.id)) return;
+    const game = slate?.games.find((g) => g.id === gameId);
     setPicks((prev) => {
       if (prev.find((p) => p.id === team.id)) {
         return prev.filter((p) => p.id !== team.id);
@@ -147,13 +149,21 @@ export function BetForm({
       if (effectiveCount >= MAX_TEAMS) return prev;
       return [
         ...prev,
-        { id: team.id, abbr: team.abbr, name: team.name, gameId },
+        {
+          id: team.id,
+          abbr: team.abbr,
+          name: team.name,
+          gameId,
+          startsAtIso: game?.startsAtIso,
+        },
       ];
     });
   }
 
   function submit() {
     if (!canSubmit || !slate) return;
+    const starts = effectivePicks.map((p) => p.startsAtIso);
+    const hitWindowCloseAtIso = computeHitWindowCloseAtIso(sport, starts);
     addBet({
       id: generateBetId(),
       userId: user.id,
@@ -161,6 +171,9 @@ export function BetForm({
       slateDate: slate.date,
       teams: effectivePicks,
       stake: effectiveStake,
+      baseStake: effectiveStake,
+      hits: [],
+      hitWindowCloseAtIso,
       status: "open",
       createdAt: new Date().toISOString(),
     });

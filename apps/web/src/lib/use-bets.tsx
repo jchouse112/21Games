@@ -12,9 +12,16 @@ import {
   BETS_KEY_PREFIX,
   betsStorageKey,
   type Bet,
+  type BetHit,
+  type BetTeam,
 } from "./bets";
+import { committedRatio, HIT_COST_FRAC, MAX_TEAMS } from "./odds";
 import { DEFAULT_SPORT, isSport } from "./sport";
 import { useDevUser } from "./use-dev-user";
+
+export type AddTeamResult =
+  | { ok: true; bet: Bet; hitCost: number }
+  | { ok: false; reason: string };
 
 type ContextValue = {
   bets: Bet[];
@@ -23,6 +30,7 @@ type ContextValue = {
   addBet: (bet: Bet) => void;
   removeBet: (id: string) => void;
   updateBet: (id: string, patch: Partial<Bet>) => void;
+  addTeamToBet: (id: string, team: BetTeam, balance: number) => AddTeamResult;
   clearBets: () => void;
 };
 
@@ -33,9 +41,17 @@ function migrateBet(raw: unknown): Bet | null {
   if (!raw || typeof raw !== "object") return null;
   const b = raw as Partial<Bet> & { sport?: unknown };
   if (typeof b.id !== "string") return null;
+  const stake = typeof b.stake === "number" ? b.stake : 0;
+  const hits: BetHit[] = Array.isArray(b.hits) ? (b.hits as BetHit[]) : [];
+  const baseStake =
+    typeof b.baseStake === "number" && b.baseStake > 0
+      ? b.baseStake
+      : stake / (1 + 0.25 * hits.length);
   return {
     ...(b as Bet),
     sport: isSport(b.sport) ? b.sport : DEFAULT_SPORT,
+    baseStake,
+    hits,
   };
 }
 
@@ -135,6 +151,36 @@ export function BetsProvider({ children }: { children: ReactNode }) {
     [userId],
   );
 
+  const addTeamToBet = useCallback(
+    (id: string, team: BetTeam, balance: number): AddTeamResult => {
+      const current = getSnapshotFor(userId);
+      const bet = current.find((b) => b.id === id);
+      if (!bet) return { ok: false, reason: "bet-not-found" };
+      if (bet.status !== "open") return { ok: false, reason: "bet-closed" };
+      if (bet.teams.length >= MAX_TEAMS) return { ok: false, reason: "max-teams" };
+      if (bet.teams.some((t) => t.id === team.id)) {
+        return { ok: false, reason: "duplicate-team" };
+      }
+      const hitCost = bet.baseStake * HIT_COST_FRAC;
+      if (balance < hitCost) return { ok: false, reason: "insufficient-balance" };
+
+      const nextHits = [...bet.hits, { at: new Date().toISOString(), team }];
+      const nextTeams = [...bet.teams, team];
+      const nextStake = bet.baseStake * committedRatio(nextHits.length);
+      const updated: Bet = {
+        ...bet,
+        teams: nextTeams,
+        hits: nextHits,
+        stake: nextStake,
+      };
+      const next = current.map((b) => (b.id === id ? updated : b));
+      saveBets(userId, next);
+      notify(userId);
+      return { ok: true, bet: updated, hitCost };
+    },
+    [userId],
+  );
+
   const clearBets = useCallback(() => {
     saveBets(userId, []);
     notify(userId);
@@ -157,6 +203,7 @@ export function BetsProvider({ children }: { children: ReactNode }) {
         addBet,
         removeBet,
         updateBet,
+        addTeamToBet,
         clearBets,
       }}
     >

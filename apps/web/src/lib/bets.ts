@@ -7,6 +7,12 @@ export type BetTeam = {
   abbr: string;
   name: string;
   gameId: string;
+  startsAtIso?: string;
+};
+
+export type BetHit = {
+  at: string;
+  team: BetTeam;
 };
 
 export type Bet = {
@@ -16,6 +22,9 @@ export type Bet = {
   slateDate: string;
   teams: BetTeam[];
   stake: number;
+  baseStake: number;
+  hits: BetHit[];
+  hitWindowCloseAtIso?: string;
   status: BetStatus;
   createdAt: string;
   settledAt?: string;
