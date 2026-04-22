@@ -14,6 +14,11 @@ const STEPS = [
   },
   {
     num: "03",
+    title: "Hit for more",
+    body: "Add a team mid-slate for 25% of your stake \u2014 up to 6 total. Cutoff: top of the 4th of your earliest game.",
+  },
+  {
+    num: "04",
     title: "Win the slate",
     body: "Closer to 21 = bigger payout. Hit exactly 21 for the Blackjack bonus.",
   },
@@ -92,6 +97,7 @@ const FAQ = [
   { q: "Is this gambling?", a: "No. Play 21 Games is a free-to-play skill game. You play with Play Tokens, not dollars. No deposits, no withdrawals, no cash wagering." },
   { q: "What does it cost?", a: "Zero. You get 100 tokens on signup. Hit empty? We'll top you up with 10 tokens at midnight. No credit card, ever." },
   { q: "How do I win?", a: "Every slate, your picks are scored against the 21 target. Closest to 21 without busting wins the biggest payout. Hit exactly 21 for the Blackjack bonus." },
+  { q: "Can I change my bet after placing it?", a: "You can Hit to add a team to an open bet \u2014 costs 25% of your original stake, maxes out at 6 teams, and locks at the top of the 4th of your earliest game. No cash-out, no lock-in." },
   { q: "What's the Basement? The Penthouse?", a: "Your balance unlocks bet sizes. Under 10 tokens you're in the Basement \u2014 $1 bets only. Climb past 2,000 and you're in the Penthouse." },
   { q: "What sports can I play?", a: "Baseball 21 and Ice 21 are live. Hoops, Gridiron, and Pitch are rolling out through the season." },
   { q: "Will there ever be real money?", a: "Not in the core game. Ever. We may run occasional skill-based tournaments with real prizes, but the daily slate stays free and token-only." },
@@ -160,7 +166,7 @@ export default function Home() {
       <section id="how-it-works" className="border-t border-zinc-800 px-6 py-24">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">How it works</h2>
-          <div className="mt-16 grid gap-8 sm:grid-cols-3">
+          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step) => (
               <div key={step.num} className="flex flex-col gap-3">
                 <span className="font-mono text-sm text-emerald-400">{step.num}</span>
