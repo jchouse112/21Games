@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import type { Bet, BetTeam } from "@/lib/bets";
 import type { AddTeamResult } from "@/lib/use-bets";
-import { useClock } from "@/lib/use-clock";
 import { useLiveScores } from "@/lib/use-live-scores";
-import { isPickLocked } from "@/lib/pick-lock";
+import { isTeamHitEligible } from "@/lib/hit-window";
 import { scoreKey } from "@/lib/sport";
 
 type SlateLite = {
@@ -32,7 +31,6 @@ export function HitPicker({
   const [slate, setSlate] = useState<SlateLite | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const now = useClock();
   const { runsBySportDate } = useLiveScores([
     { sport: bet.sport, date: bet.slateDate },
   ]);
@@ -61,14 +59,12 @@ export function HitPicker({
   if (slate) {
     for (const g of slate.games) {
       const startsAtIso = g.startsAtIso;
-      const awayStatus = runs.get(g.away.id)?.status;
-      const homeStatus = runs.get(g.home.id)?.status;
-      const awayLocked = isPickLocked({ startsAtIso, liveStatus: awayStatus, now });
-      const homeLocked = isPickLocked({ startsAtIso, liveStatus: homeStatus, now });
-      if (!pickedIds.has(g.away.id) && !awayLocked) {
+      const awayOk = isTeamHitEligible(bet.sport, runs.get(g.away.id));
+      const homeOk = isTeamHitEligible(bet.sport, runs.get(g.home.id));
+      if (!pickedIds.has(g.away.id) && awayOk) {
         eligible.push({ ...g.away, gameId: g.id, startsAtIso });
       }
-      if (!pickedIds.has(g.home.id) && !homeLocked) {
+      if (!pickedIds.has(g.home.id) && homeOk) {
         eligible.push({ ...g.home, gameId: g.id, startsAtIso });
       }
     }

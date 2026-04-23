@@ -15,7 +15,6 @@ import {
   previewTable,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
-import { computeHitWindowCloseAtIso } from "@/lib/hit-window";
 import type {
   NhlSlate,
   NhlSlateGame,
@@ -162,8 +161,6 @@ export function BetForm({
 
   function submit() {
     if (!canSubmit || !slate) return;
-    const starts = effectivePicks.map((p) => p.startsAtIso);
-    const hitWindowCloseAtIso = computeHitWindowCloseAtIso(sport, starts);
     addBet({
       id: generateBetId(),
       userId: user.id,
@@ -173,7 +170,6 @@ export function BetForm({
       stake: effectiveStake,
       baseStake: effectiveStake,
       hits: [],
-      hitWindowCloseAtIso,
       status: "open",
       createdAt: new Date().toISOString(),
     });

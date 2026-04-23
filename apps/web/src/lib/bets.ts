@@ -24,7 +24,6 @@ export type Bet = {
   stake: number;
   baseStake: number;
   hits: BetHit[];
-  hitWindowCloseAtIso?: string;
   status: BetStatus;
   createdAt: string;
   settledAt?: string;

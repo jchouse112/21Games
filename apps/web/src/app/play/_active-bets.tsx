@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useBets } from "@/lib/use-bets";
 import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
-import { useClock } from "@/lib/use-clock";
 import {
   HIT_COST_FRAC,
   MAX_TEAMS,
@@ -21,7 +20,6 @@ import {
   type RunsMap,
   type TeamScore,
 } from "@/lib/settlement";
-import { isHitWindowClosed } from "@/lib/hit-window";
 import type { Bet, BetTeam } from "@/lib/bets";
 import { scoreKey, type Sport } from "@/lib/sport";
 import { HitPicker } from "./_hit-picker";
@@ -152,7 +150,6 @@ function BetRow({
   const lambda = lambdaFor(bet.sport);
   const probs = handProbabilities(bet.teams.length, lambda);
   const progress = computeBetProgress(bet, runs);
-  const now = useClock();
   const placed = new Date(bet.createdAt).toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
@@ -161,12 +158,10 @@ function BetRow({
   const anyGameStarted = progress.perTeam.some(
     (p) => p.score != null && p.score.status !== "scheduled",
   );
-  const hitClosed = isHitWindowClosed(bet, runs, now);
   const hitCost = bet.baseStake * HIT_COST_FRAC;
   const canHit =
     !canSettle &&
     bet.teams.length < MAX_TEAMS &&
-    !hitClosed &&
     balance >= hitCost;
   const totalLabel = `${progress.liveTotal} / 21`;
   const totalTint =
