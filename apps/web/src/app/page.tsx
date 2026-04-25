@@ -1,28 +1,6 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
-
-const STEPS = [
-  {
-    num: "01",
-    title: "Pick your teams",
-    body: "Choose 3-6 teams from today's slate. No spreads. No props. Just teams.",
-  },
-  {
-    num: "02",
-    title: "Chase 21",
-    body: "Their combined runs need to hit 21 \u2014 exact, or just under. Go over, you bust.",
-  },
-  {
-    num: "03",
-    title: "Hit for more",
-    body: "Add a team early in its game \u2014 before the 4th inning (MLB) or 2nd period (NHL). 25% of your stake, up to 6 total.",
-  },
-  {
-    num: "04",
-    title: "Win the slate",
-    body: "Closer to 21 = bigger payout. Hit exactly 21 for the Blackjack bonus.",
-  },
-];
+import { HowItWorks } from "./_how-it-works";
 
 type SportIcon = "baseball" | "puck" | "basketball" | "football" | "soccer";
 
@@ -96,8 +74,8 @@ function SportGlyph({ icon, className }: { icon: SportIcon; className?: string }
 const FAQ = [
   { q: "Is this gambling?", a: "No. Play 21 Games is a free-to-play skill game. You play with Play Tokens, not dollars. No deposits, no withdrawals, no cash wagering." },
   { q: "What does it cost?", a: "Zero. You get 100 tokens on signup. Hit empty? We'll top you up with 10 tokens at midnight. No credit card, ever." },
-  { q: "How do I win?", a: "Every slate, your picks are scored against the 21 target. Closest to 21 without busting wins the biggest payout. Hit exactly 21 for the Blackjack bonus." },
-  { q: "Can I change my bet after placing it?", a: "You can Hit to add a team to an open bet \u2014 costs 25% of your original stake, maxes out at 6 teams. The team\u2019s game has to be early: before the 4th inning in baseball, before the 2nd period in hockey. No cash-out, no lock-in." },
+  { q: "How do I win?", a: "Every slate, your picks are scored against that game's target. Closest without busting wins the biggest payout. Hit the target exactly for the Blackjack bonus." },
+  { q: "Can I change my bet after placing it?", a: "You can Hit to add a team or player to an open bet — costs 25% of your original stake, maxes out at 6 picks. The pick has to still be early: before the 4th inning in baseball, before the 2nd period in hockey. No cash-out, no lock-in." },
   { q: "How do levels work?", a: "Your token balance unlocks bigger bet sizes: Rookie starts with $1 bets, Starter adds $2, All-Star unlocks $5 and $10, and MVP unlocks $25." },
   { q: "What sports can I play?", a: "Baseball 21 and Ice 21 are live. Hoops, Gridiron, and Pitch are rolling out through the season." },
   { q: "Will there ever be real money?", a: "Not in the core game. Ever. We may run occasional skill-based tournaments with real prizes, but the daily slate stays free and token-only." },
@@ -137,7 +115,7 @@ export default function Home() {
             Hit <span className="text-emerald-400">21</span>. Don&apos;t bust.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-zinc-300 sm:text-xl">
-            The blackjack of sports. Pick teams. Stack runs. Win the slate.
+            The blackjack of sports. Pick teams or players. Chase the target. Win the slate.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -163,25 +141,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="how-it-works" className="border-t border-zinc-800 px-6 py-24">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">How it works</h2>
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step) => (
-              <div key={step.num} className="flex flex-col gap-3">
-                <span className="font-mono text-sm text-emerald-400">{step.num}</span>
-                <h3 className="text-2xl font-semibold">{step.title}</h3>
-                <p className="text-zinc-400">{step.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HowItWorks />
 
-      <section id="faq" className="border-t border-zinc-800 px-6 py-24">
+      <section className="border-t border-zinc-800 px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">The lineup</h2>
-          <p className="mx-auto mt-4 max-w-xl text-center text-zinc-400">Five sports. One target. 21.</p>
+          <p className="mx-auto mt-4 max-w-xl text-center text-zinc-400">Five sports. Blackjack-style targets.</p>
           <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {SPORTS.map((sport) => {
               const baseClasses =
@@ -233,7 +198,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t border-zinc-800 px-6 py-24">
+      <section id="faq" className="border-t border-zinc-800 px-6 py-24">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">Frequently asked</h2>
           <div className="mt-16 divide-y divide-zinc-800 border-y border-zinc-800">
