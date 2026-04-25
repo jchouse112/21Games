@@ -21,6 +21,7 @@ import type {
   NhlSlateGame,
   NhlTeamEntry,
   Slate,
+  SlateDay,
   SlateGame,
   TeamEntry,
 } from "@/lib/slate";
@@ -44,9 +45,11 @@ const SPORT_LABELS: Record<Sport, string> = { mlb: "MLB", nhl: "NHL" };
 export function BetForm({
   sport,
   slate,
+  day,
 }: {
   sport: Sport;
   slate: AnySlate | null;
+  day: SlateDay;
 }) {
   const { user, state, updateBalance } = useDevUser();
   const { addBet, openBets } = useBets();
@@ -191,9 +194,9 @@ export function BetForm({
 
   if (slate === null) {
     return (
-      <Shell>
+      <Shell sport={sport} day={day}>
         <p className="mt-2 text-zinc-400">
-          Couldn&apos;t load today&apos;s slate. Try again in a minute.
+          Couldn&apos;t load this slate. Try again in a minute.
         </p>
       </Shell>
     );
@@ -201,9 +204,9 @@ export function BetForm({
 
   if (slate.games.length === 0) {
     return (
-      <Shell meta={slate.date}>
+      <Shell sport={sport} day={day} meta={slate.date}>
         <p className="mt-2 text-zinc-400">
-          No {SPORT_LABELS[sport]} games on {slate.date}. Check back tomorrow.
+          No {SPORT_LABELS[sport]} games on {slate.date}. Try another slate.
         </p>
       </Shell>
     );
@@ -211,6 +214,8 @@ export function BetForm({
 
   return (
     <Shell
+      sport={sport}
+      day={day}
       meta={`${slate.date} \u00b7 ${slate.games.length} game${slate.games.length === 1 ? "" : "s"}`}
     >
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -268,24 +273,65 @@ export function BetForm({
 }
 
 function Shell({
+  sport,
+  day,
   meta,
   children,
 }: {
+  sport: Sport;
+  day: SlateDay;
   meta?: string;
   children: React.ReactNode;
 }) {
+  const title = day === "tomorrow" ? "Tomorrow's slate" : "Today's slate";
+  const basePath = `/play/${sport}`;
+
   return (
     <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold">Today&apos;s slate</h2>
-        {meta ? (
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            {meta}
-          </span>
-        ) : null}
+        <div>
+          <h2 className="text-xl font-semibold">{title}</h2>
+          {meta ? (
+            <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              {meta}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex items-center rounded-full border border-zinc-800 bg-zinc-950 p-0.5">
+          <SlateDayLink href={basePath} active={day === "today"}>
+            Today
+          </SlateDayLink>
+          <SlateDayLink href={`${basePath}?day=tomorrow`} active={day === "tomorrow"}>
+            Tomorrow
+          </SlateDayLink>
+        </div>
       </div>
       {children}
     </section>
+  );
+}
+
+function SlateDayLink({
+  href,
+  active,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
+        active
+          ? "bg-emerald-500/20 text-emerald-300"
+          : "text-zinc-500 hover:text-zinc-200"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 

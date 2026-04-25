@@ -56,6 +56,13 @@ export type NhlSlate = {
   games: NhlSlateGame[];
 };
 
+export type SlateDay = "today" | "tomorrow";
+
+export function normalizeSlateDay(value: unknown): SlateDay {
+  if (Array.isArray(value)) return normalizeSlateDay(value[0]);
+  return value === "tomorrow" ? "tomorrow" : "today";
+}
+
 export function getTodayIsoDateEt(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
@@ -63,6 +70,17 @@ export function getTodayIsoDateEt(): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+function addIsoDateDays(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const dt = new Date(Date.UTC(year!, month! - 1, day! + days, 12, 0, 0));
+  return dt.toISOString().slice(0, 10);
+}
+
+export function getSlateDateEt(day: SlateDay): string {
+  const today = getTodayIsoDateEt();
+  return day === "tomorrow" ? addIsoDateDays(today, 1) : today;
 }
 
 function formatEtTime(iso: string): string {

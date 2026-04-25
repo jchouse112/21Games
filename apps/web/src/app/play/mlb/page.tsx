@@ -1,19 +1,31 @@
-import { getTodaySlate, type Slate } from "@/lib/slate";
+import {
+  getSlateDateEt,
+  getTodaySlate,
+  normalizeSlateDay,
+  type Slate,
+} from "@/lib/slate";
 import { BetForm } from "../_bet-form";
 import { OpenBetsPill } from "../_open-bets-pill";
 
-export default async function PlayMlbPage() {
+export default async function PlayMlbPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const day = normalizeSlateDay(params.day);
+  const date = getSlateDateEt(day);
   let slate: Slate | null = null;
   try {
-    slate = await getTodaySlate();
+    slate = await getTodaySlate(date);
   } catch (error) {
-    console.error("Failed to load today's MLB slate", error);
+    console.error(`Failed to load MLB slate for ${date}`, error);
   }
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
       <OpenBetsPill />
-      <BetForm sport="mlb" slate={slate} />
+      <BetForm key={`mlb-${date}`} sport="mlb" slate={slate} day={day} />
     </main>
   );
 }
