@@ -38,6 +38,7 @@ type PlacedBetConfirmation = {
   sport: Sport;
   stake: number;
   teamCount: number;
+  potentialWin: number;
 };
 
 const SPORT_LABELS: Record<Sport, string> = { mlb: "MLB", nhl: "NHL" };
@@ -175,6 +176,7 @@ export function BetForm({
     if (!canSubmit || !slate) return;
     const id = generateBetId();
     const teamCount = effectivePicks.length;
+    const potentialWin = Math.max(0, ...preview.map((row) => row.payout));
     addBet({
       id,
       userId: user.id,
@@ -189,7 +191,7 @@ export function BetForm({
     });
     updateBalance(state.balance - effectiveStake);
     setPicks([]);
-    setPlacedBet({ id, sport, stake: effectiveStake, teamCount });
+    setPlacedBet({ id, sport, stake: effectiveStake, teamCount, potentialWin });
   }
 
   if (slate === null) {
@@ -510,26 +512,45 @@ function PlacedBetNotice({
     placedBet.sport === "nhl"
       ? "before the 2nd period begins"
       : "before the 4th inning begins";
+  const potentialWin = placedBet.potentialWin.toFixed(
+    placedBet.potentialWin % 1 === 0 ? 0 : 1,
+  );
 
   return (
-    <div className="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="mt-6 rounded-xl border border-emerald-400/40 bg-emerald-400/10 p-5 shadow-[0_0_40px_rgba(52,211,153,0.08)]">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-emerald-300">
+            Ticket confirmed
+          </p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-50">
             Bet placed
           </p>
-          <p className="mt-1 text-sm text-zinc-200">
-            Your {placedBet.teamCount}-team ticket is live for {placedBet.stake}{" "}
-            token{placedBet.stake === 1 ? "" : "s"}.
+          <p className="mt-1 text-sm text-zinc-400">
+            {placedBet.teamCount}-team ticket · {placedBet.stake} token
+            {placedBet.stake === 1 ? "" : "s"} staked
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 transition hover:text-zinc-200"
-        >
-          Dismiss
-        </button>
+        <div className="flex items-start gap-4">
+          <div className="text-right">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+              Potential win
+            </p>
+            <p className="mt-1 text-3xl font-semibold leading-none text-emerald-200">
+              {potentialWin}
+            </p>
+            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">
+              tokens max
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 transition hover:text-zinc-200"
+          >
+            Dismiss
+          </button>
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
         <p className="text-sm text-zinc-400">
