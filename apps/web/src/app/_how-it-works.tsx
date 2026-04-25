@@ -45,7 +45,7 @@ const HOW_TO: SportHowTo[] = [
   {
     key: "nba",
     label: "Hoops 21",
-    status: "Coming soon",
+    status: "Live",
     eyebrow: "Players · 3-pointers",
     summary: "Pick players and chase 21 made threes across the slate.",
     steps: [
@@ -71,11 +71,11 @@ const HOW_TO: SportHowTo[] = [
   {
     key: "soccer",
     label: "Pitch 11",
-    status: "Coming soon",
+    status: "Live",
     eyebrow: "Teams · Goals",
     summary: "A soccer variant built around an 11-goal target — one for every player on the pitch.",
     steps: [
-      { num: "01", title: "Pick your teams", body: "Choose 5-9 teams from the soccer slate once Pitch goes live." },
+      { num: "01", title: "Pick your teams", body: "Choose 5-9 teams from the soccer slate." },
       { num: "02", title: "Chase 11", body: "Their combined goals need to land on 11 — or finish just under in the 8-10 win zone." },
       { num: "03", title: "Hit for more", body: "Add another team before the end of its 1st half. Same 25% Hit cost, up to 9 total." },
       { num: "04", title: "Win the slate", body: "Finish closest to 11 without going over. Exactly 11 earns the bonus." },

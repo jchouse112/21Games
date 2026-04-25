@@ -64,7 +64,9 @@ export function ClosedBets() {
 
 function SportBadge({ sport }: { sport: Sport }) {
   const cls =
-    sport === "soccer"
+    sport === "nba"
+      ? "border-orange-400/40 bg-orange-400/10 text-orange-200"
+      : sport === "soccer"
       ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
       : sport === "nhl"
       ? "border-sky-400/40 bg-sky-400/10 text-sky-200"

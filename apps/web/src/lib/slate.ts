@@ -12,6 +12,12 @@ import {
   pickScheduledDay,
   type NhlGoalie,
 } from "./nhl";
+import {
+  fetchNbaScoreboard,
+  fetchNbaTeamRoster,
+  type NbaCompetitor,
+  type NbaRosterAthlete,
+} from "./nba";
 import { fetchSoccerScoreboard, type SoccerCompetitor } from "./soccer";
 
 export type TeamEntry = {
@@ -75,6 +81,40 @@ export type SoccerSlateGame = {
 export type SoccerSlate = {
   date: string;
   games: SoccerSlateGame[];
+};
+
+export type NbaTeamEntry = {
+  id: number;
+  abbr: string;
+  name: string;
+};
+
+export type NbaPlayerEntry = {
+  id: number;
+  abbr: string;
+  name: string;
+  teamId: number;
+  teamAbbr: string;
+  teamName: string;
+  position: string | null;
+  jersey: string | null;
+  gameId: string;
+  startsAtIso: string;
+};
+
+export type NbaSlateGame = {
+  id: string;
+  startsAtIso: string;
+  timeLabel: string;
+  venue: string;
+  away: NbaTeamEntry;
+  home: NbaTeamEntry;
+  players: NbaPlayerEntry[];
+};
+
+export type NbaSlate = {
+  date: string;
+  games: NbaSlateGame[];
 };
 
 export type SlateDay = "today" | "tomorrow";
@@ -254,4 +294,92 @@ export async function getTodaySoccerSlate(date?: string): Promise<SoccerSlate> {
 
   games.sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso));
   return { date: isoDate, games };
+}
+
+function nbaTeamEntry(c: NbaCompetitor): NbaTeamEntry | null {
+  const id = Number(c.team?.id ?? c.id);
+  if (!Number.isFinite(id)) return null;
+  const abbr = c.team?.abbreviation ?? String(id);
+  return {
+    id,
+    abbr,
+    name: c.team?.displayName ?? c.team?.shortDisplayName ?? c.team?.name ?? abbr,
+  };
+}
+
+function nbaPlayerEntry(
+  athlete: NbaRosterAthlete,
+  team: NbaTeamEntry,
+  gameId: string,
+  startsAtIso: string,
+): NbaPlayerEntry | null {
+  const id = Number(athlete.id);
+  if (!Number.isFinite(id)) return null;
+  const status = athlete.status?.type?.toLowerCase();
+  if (status && status !== "active") return null;
+  const name = athlete.displayName ?? athlete.shortName ?? String(id);
+  return {
+    id,
+    abbr: athlete.shortName ?? name,
+    name,
+    teamId: team.id,
+    teamAbbr: team.abbr,
+    teamName: team.name,
+    position: athlete.position?.abbreviation ?? null,
+    jersey: athlete.jersey ?? null,
+    gameId,
+    startsAtIso,
+  };
+}
+
+async function nbaPlayersForTeam(
+  team: NbaTeamEntry,
+  gameId: string,
+  startsAtIso: string,
+): Promise<NbaPlayerEntry[]> {
+  const roster = await fetchNbaTeamRoster(team.id).catch(() => null);
+  return (roster?.athletes ?? [])
+    .map((athlete) => nbaPlayerEntry(athlete, team, gameId, startsAtIso))
+    .filter((p): p is NbaPlayerEntry => p !== null)
+    .sort((a, b) => a.teamAbbr.localeCompare(b.teamAbbr) || a.name.localeCompare(b.name));
+}
+
+export async function getTodayNbaSlate(date?: string): Promise<NbaSlate> {
+  const isoDate = date ?? getTodayIsoDateEt();
+  const scoreboard = await fetchNbaScoreboard(isoDate);
+
+  const games = await Promise.all(
+    (scoreboard.events ?? []).map(async (event): Promise<NbaSlateGame | null> => {
+      const competition = event.competitions?.[0];
+      if (!competition) return null;
+      const awayRaw = competition.competitors?.find((c) => c.homeAway === "away");
+      const homeRaw = competition.competitors?.find((c) => c.homeAway === "home");
+      if (!awayRaw || !homeRaw) return null;
+      const away = nbaTeamEntry(awayRaw);
+      const home = nbaTeamEntry(homeRaw);
+      if (!away || !home) return null;
+      const id = String(competition.id ?? event.id);
+      const startsAtIso = competition.startDate ?? competition.date ?? event.date;
+      const [awayPlayers, homePlayers] = await Promise.all([
+        nbaPlayersForTeam(away, id, startsAtIso),
+        nbaPlayersForTeam(home, id, startsAtIso),
+      ]);
+      return {
+        id,
+        startsAtIso,
+        timeLabel: formatEtTime(startsAtIso),
+        venue: competition.venue?.fullName ?? event.venue?.displayName ?? "",
+        away,
+        home,
+        players: [...awayPlayers, ...homePlayers],
+      };
+    }),
+  );
+
+  return {
+    date: isoDate,
+    games: games
+      .filter((g): g is NbaSlateGame => g !== null)
+      .sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso)),
+  };
 }

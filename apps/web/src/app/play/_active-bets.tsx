@@ -162,6 +162,8 @@ function BetRow({
   );
   const hitCost = bet.baseStake * HIT_COST_FRAC;
   const pickLimits = pickLimitsFor(bet.sport);
+  const pickNoun = bet.sport === "nba" ? "players" : "teams";
+  const singlePickNoun = bet.sport === "nba" ? "player" : "team";
   const canHit =
     !canSettle &&
     bet.teams.length < pickLimits.max &&
@@ -220,7 +222,7 @@ function BetRow({
             })}
           </div>
           <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            {bet.teams.length} teams · placed {placed} · win {(probs.pZone * 100).toFixed(0)}% · bj {(probs.pBj * 100).toFixed(1)}%
+            {bet.teams.length} {pickNoun} · placed {placed} · win {(probs.pZone * 100).toFixed(0)}% · bj {(probs.pBj * 100).toFixed(1)}%
           </p>
         </div>
         <div className="grid grid-cols-3 items-start gap-3 rounded-lg border border-zinc-900 bg-black/10 px-3 py-2">
@@ -291,7 +293,7 @@ function BetRow({
               type="button"
               onClick={onRequestHit}
               className="w-full rounded-md border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
-              title={`Add a team for +${hitCost.toFixed(2)} (25% of base)`}
+              title={`Add a ${singlePickNoun} for +${hitCost.toFixed(2)} (25% of base)`}
             >
               Hit · +{hitCost.toFixed(2)}
             </button>
@@ -304,7 +306,9 @@ function BetRow({
 
 function SportBadge({ sport }: { sport: Sport }) {
   const cls =
-    sport === "soccer"
+    sport === "nba"
+      ? "border-orange-400/40 bg-orange-400/10 text-orange-200"
+      : sport === "soccer"
       ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
       : sport === "nhl"
       ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
@@ -344,6 +348,8 @@ function TeamChip({ abbr, score }: { abbr: string; score: TeamScore | null }) {
   const liveSuffix =
     score.status === "live" && score.inningOrdinal
       ? ` ${score.inningHalf === "Top" ? "▲" : "▼"}${score.inning ?? ""}`
+      : score.status === "live" && score.period
+        ? ` Q${score.period}`
       : "";
   return (
     <span className={`${base} ${color}`} title={score.status === "live" ? `${score.inningOrdinal ?? ""} ${score.inningHalf ?? ""}`.trim() : score.status}>

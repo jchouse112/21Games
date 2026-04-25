@@ -6,7 +6,7 @@ import { DEV_USERS, getTier } from "@/lib/dev-users";
 import { useDevUser } from "@/lib/use-dev-user";
 
 const TABS = [
-  { href: "/play/mlb", label: "Bet", match: ["/play/mlb", "/play/nhl", "/play/soccer"] },
+  { href: "/play/mlb", label: "Bet", match: ["/play/mlb", "/play/nhl", "/play/soccer", "/play/nba"] },
   { href: "/play/my-bets", label: "My Bets", match: ["/play/my-bets"] },
 ] as const;
 
@@ -14,6 +14,7 @@ const SPORT_PILLS = [
   { href: "/play/mlb", label: "MLB" },
   { href: "/play/nhl", label: "NHL" },
   { href: "/play/soccer", label: "MLS" },
+  { href: "/play/nba", label: "NBA" },
 ] as const;
 
 export function PlayHeader() {
@@ -52,7 +53,8 @@ export function PlayHeader() {
           </nav>
           {(pathname.startsWith("/play/mlb") ||
             pathname.startsWith("/play/nhl") ||
-            pathname.startsWith("/play/soccer")) && (
+            pathname.startsWith("/play/soccer") ||
+            pathname.startsWith("/play/nba")) && (
             <div
               role="tablist"
               aria-label="Sport"

@@ -5,6 +5,7 @@ import {
   compensatedHold,
   handProbabilities,
   HIT_COST_FRAC,
+  LAMBDA_NBA,
   LAMBDA_MLB,
   LAMBDA_NHL,
   LAMBDA_SOCCER,
@@ -27,12 +28,14 @@ describe("lambda constants", () => {
     expect(LAMBDA_MLB).toBe(4.6);
     expect(LAMBDA_NHL).toBe(3.0);
     expect(LAMBDA_SOCCER).toBe(1.35);
+    expect(LAMBDA_NBA).toBe(2.6);
   });
 
   it("lambdaFor returns the right value per sport", () => {
     expect(lambdaFor("mlb")).toBe(LAMBDA_MLB);
     expect(lambdaFor("nhl")).toBe(LAMBDA_NHL);
     expect(lambdaFor("soccer")).toBe(LAMBDA_SOCCER);
+    expect(lambdaFor("nba")).toBe(LAMBDA_NBA);
   });
 });
 
@@ -40,6 +43,7 @@ describe("sport-specific targets", () => {
   it("keeps MLB/NHL on 21 and moves soccer to Pitch 11", () => {
     expect(targetFor("mlb")).toBe(TARGET);
     expect(targetFor("nhl")).toBe(TARGET);
+    expect(targetFor("nba")).toBe(TARGET);
     expect(targetFor("soccer")).toBe(SOCCER_TARGET);
     expect(zoneLowFor("soccer")).toBe(SOCCER_ZONE_LOW);
   });
@@ -56,6 +60,10 @@ describe("sport-specific pick limits", () => {
 
   it("sets Pitch 11 to 5-9 teams", () => {
     expect(pickLimitsFor("soccer")).toEqual({ min: 5, max: 9 });
+  });
+
+  it("sets Hoops 21 to 5-8 players", () => {
+    expect(pickLimitsFor("nba")).toEqual({ min: 5, max: 8 });
   });
 });
 
@@ -132,6 +140,21 @@ describe("Pitch 11 behavior", () => {
     expect(settleBet(7, 8, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("win");
     expect(settleBet(7, 11, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("bj");
     expect(settleBet(7, 12, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("bust");
+  });
+});
+
+describe("Hoops 21 behavior", () => {
+  it("uses the standard 15-21 payout table with 21 as blackjack", () => {
+    const rows = previewTable(6, 10, LAMBDA_NBA, 10, TARGET, ZONE_LOW);
+    expect(rows.map((r) => r.total)).toEqual([15, 16, 17, 18, 19, 20, 21]);
+    expect(rows[rows.length - 1]?.isBj).toBe(true);
+  });
+
+  it("classifies NBA short/win/bj/bust around target 21", () => {
+    expect(settleBet(6, 14, 10, LAMBDA_NBA).status).toBe("short");
+    expect(settleBet(6, 18, 10, LAMBDA_NBA).status).toBe("win");
+    expect(settleBet(6, 21, 10, LAMBDA_NBA).status).toBe("bj");
+    expect(settleBet(6, 22, 10, LAMBDA_NBA).status).toBe("bust");
   });
 });
 

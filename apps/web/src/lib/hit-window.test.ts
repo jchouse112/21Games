@@ -108,3 +108,22 @@ describe("isTeamHitEligible — Soccer", () => {
     ).toBe(false);
   });
 });
+
+describe("isTeamHitEligible — NBA", () => {
+  it("treats a missing score as scheduled and eligible", () => {
+    expect(isTeamHitEligible("nba", undefined)).toBe(true);
+  });
+
+  it("is eligible before and during the 1st quarter", () => {
+    expect(isTeamHitEligible("nba", score(1, { status: "scheduled" }))).toBe(true);
+    expect(
+      isTeamHitEligible("nba", score(1, { status: "live", period: 1 })),
+    ).toBe(true);
+  });
+
+  it("is not eligible once the 2nd quarter begins", () => {
+    expect(
+      isTeamHitEligible("nba", score(1, { status: "live", period: 2 })),
+    ).toBe(false);
+  });
+});

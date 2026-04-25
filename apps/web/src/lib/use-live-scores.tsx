@@ -17,6 +17,7 @@ export type ScoreTarget = { sport: Sport; date: string };
 function endpointFor(sport: Sport, date: string): string {
   if (sport === "nhl") return `/api/scores/nhl?date=${date}`;
   if (sport === "soccer") return `/api/scores/soccer?date=${date}`;
+  if (sport === "nba") return `/api/scores/nba?date=${date}`;
   return `/api/scores?date=${date}`;
 }
 

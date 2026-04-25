@@ -1,4 +1,9 @@
 import type { ScheduleResponse } from "./mlb";
+import {
+  parseNbaMadeThrees,
+  type NbaStatus,
+  type NbaSummaryResponse,
+} from "./nba";
 import type { NhlScoreResponse } from "./nhl";
 import type { SoccerScoreboardResponse, SoccerStatus } from "./soccer";
 import type { Bet } from "./bets";
@@ -281,6 +286,59 @@ export function extractSoccerGoalsMap(scoreboard: SoccerScoreboardResponse): Run
         period,
         periodClock: clock,
       });
+    }
+  }
+  return map;
+}
+
+export function classifyNbaStatus(status?: NbaStatus): GameStatus {
+  const type = status?.type;
+  const state = (type?.state ?? "").toLowerCase();
+  const text = [type?.description, type?.detail, type?.shortDetail]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (
+    text.includes("postponed") ||
+    text.includes("cancelled") ||
+    text.includes("canceled") ||
+    text.includes("suspended")
+  ) {
+    return "voided";
+  }
+  if (type?.completed || state === "post" || text.includes("final")) {
+    return "final";
+  }
+  if (state === "pre" || text.includes("scheduled")) return "scheduled";
+  if (state === "in") return "live";
+  return "scheduled";
+}
+
+export function extractNbaThreePointersMap(summary: NbaSummaryResponse): RunsMap {
+  const map: RunsMap = new Map();
+  const competition = summary.header?.competitions?.[0];
+  const status = classifyNbaStatus(competition?.status);
+  const period = competition?.status?.period ?? null;
+  const clock = competition?.status?.displayClock ?? null;
+  const gamePk = Number(competition?.id ?? 0);
+
+  for (const team of summary.boxscore?.players ?? []) {
+    for (const statGroup of team.statistics ?? []) {
+      for (const row of statGroup.athletes ?? []) {
+        const id = Number(row.athlete?.id);
+        if (!Number.isFinite(id)) continue;
+        map.set(id, {
+          teamId: id,
+          gamePk,
+          runs: status === "scheduled" ? 0 : parseNbaMadeThrees(statGroup.labels, row.stats),
+          status,
+          inning: null,
+          inningOrdinal: null,
+          inningHalf: null,
+          period,
+          periodClock: clock,
+        });
+      }
     }
   }
   return map;

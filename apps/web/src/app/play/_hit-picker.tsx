@@ -14,6 +14,14 @@ type SlateLite = {
     startsAtIso: string;
     away: { id: number; abbr: string; name: string };
     home: { id: number; abbr: string; name: string };
+    players?: Array<{
+      id: number;
+      abbr: string;
+      name: string;
+      teamId: number;
+      teamAbbr: string;
+      startsAtIso: string;
+    }>;
   }>;
 };
 
@@ -37,7 +45,7 @@ export function HitPicker({
   const runs = runsBySportDate.get(scoreKey(bet.sport, bet.slateDate)) ?? new Map();
 
   useEffect(() => {
-    if (bet.sport !== "mlb" && bet.sport !== "nhl" && bet.sport !== "soccer") return;
+    if (bet.sport !== "mlb" && bet.sport !== "nhl" && bet.sport !== "soccer" && bet.sport !== "nba") return;
     let cancelled = false;
     (async () => {
       try {
@@ -59,6 +67,15 @@ export function HitPicker({
   if (slate) {
     for (const g of slate.games) {
       const startsAtIso = g.startsAtIso;
+      if (bet.sport === "nba") {
+        for (const player of g.players ?? []) {
+          const score = runs.get(player.id) ?? runs.get(player.teamId);
+          if (!pickedIds.has(player.id) && isTeamHitEligible(bet.sport, score)) {
+            eligible.push({ ...player, gameId: g.id, startsAtIso });
+          }
+        }
+        continue;
+      }
       const awayOk = isTeamHitEligible(bet.sport, runs.get(g.away.id));
       const homeOk = isTeamHitEligible(bet.sport, runs.get(g.home.id));
       if (!pickedIds.has(g.away.id) && awayOk) {
@@ -91,7 +108,7 @@ export function HitPicker({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Hit — add a team</h3>
+          <h3 className="text-lg font-semibold">Hit — add a {bet.sport === "nba" ? "player" : "team"}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -103,7 +120,7 @@ export function HitPicker({
         <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
           Base {bet.baseStake} · hits {bet.hits.length} · committed {bet.stake.toFixed(2)}
         </p>
-        {bet.sport !== "mlb" && bet.sport !== "nhl" && bet.sport !== "soccer" ? (
+        {bet.sport !== "mlb" && bet.sport !== "nhl" && bet.sport !== "soccer" && bet.sport !== "nba" ? (
           <p className="mt-6 text-sm text-zinc-400">Hit isn&apos;t available for this sport yet.</p>
         ) : error ? (
           <p className="mt-6 text-sm text-rose-300">Couldn&apos;t load slate: {error}</p>
@@ -111,7 +128,7 @@ export function HitPicker({
           <p className="mt-6 text-sm text-zinc-400">Loading slate…</p>
         ) : eligible.length === 0 ? (
           <p className="mt-6 text-sm text-zinc-400">
-            No eligible teams right now — all remaining games are locked or already on this bet.
+            No eligible {bet.sport === "nba" ? "players" : "teams"} right now — all remaining games are locked or already on this bet.
           </p>
         ) : (
           <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">

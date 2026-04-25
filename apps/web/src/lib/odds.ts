@@ -3,11 +3,13 @@ import type { Sport } from "./sport";
 export const LAMBDA_MLB = 4.6;
 export const LAMBDA_NHL = 3.0;
 export const LAMBDA_SOCCER = 1.35;
+export const LAMBDA_NBA = 2.6;
 export const LAMBDA = LAMBDA_MLB;
 
 export function lambdaFor(sport: Sport): number {
   if (sport === "nhl") return LAMBDA_NHL;
   if (sport === "soccer") return LAMBDA_SOCCER;
+  if (sport === "nba") return LAMBDA_NBA;
   return LAMBDA_MLB;
 }
 
@@ -21,6 +23,8 @@ export const NHL_MIN_TEAMS = 4;
 export const NHL_MAX_TEAMS = 8;
 export const SOCCER_MIN_TEAMS = 5;
 export const SOCCER_MAX_TEAMS = 9;
+export const NBA_MIN_PLAYERS = 5;
+export const NBA_MAX_PLAYERS = 8;
 export const MIN_TEAMS = MLB_MIN_TEAMS;
 export const MAX_TEAMS = MLB_MAX_TEAMS;
 
@@ -37,6 +41,7 @@ export function pickLimitsFor(sport: Sport): { min: number; max: number } {
   if (sport === "soccer") {
     return { min: SOCCER_MIN_TEAMS, max: SOCCER_MAX_TEAMS };
   }
+  if (sport === "nba") return { min: NBA_MIN_PLAYERS, max: NBA_MAX_PLAYERS };
   return { min: MLB_MIN_TEAMS, max: MLB_MAX_TEAMS };
 }
 

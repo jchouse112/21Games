@@ -21,6 +21,9 @@ import type {
   NhlSlate,
   NhlSlateGame,
   NhlTeamEntry,
+  NbaPlayerEntry,
+  NbaSlate,
+  NbaSlateGame,
   Slate,
   SlateDay,
   SlateGame,
@@ -32,11 +35,12 @@ import type {
 import type { RunsMap } from "@/lib/settlement";
 import { scoreKey, type Sport } from "@/lib/sport";
 import { GameCard } from "./_game-card";
+import { PlayerGameCard } from "./_player-game-card";
 
 type Pick = BetTeam;
-type AnySlate = Slate | NhlSlate | SoccerSlate;
-type AnySlateGame = SlateGame | NhlSlateGame | SoccerSlateGame;
-type AnyTeamEntry = TeamEntry | NhlTeamEntry | SoccerTeamEntry;
+type AnySlate = Slate | NhlSlate | SoccerSlate | NbaSlate;
+type AnySlateGame = SlateGame | NhlSlateGame | SoccerSlateGame | NbaSlateGame;
+type AnyPickEntry = TeamEntry | NhlTeamEntry | SoccerTeamEntry | NbaPlayerEntry;
 type PlacedBetConfirmation = {
   id: string;
   sport: Sport;
@@ -49,7 +53,12 @@ const SPORT_LABELS: Record<Sport, string> = {
   mlb: "MLB",
   nhl: "NHL",
   soccer: "MLS",
+  nba: "NBA",
 };
+
+function isNbaSlateGame(game: AnySlateGame): game is NbaSlateGame {
+  return "players" in game;
+}
 
 export function BetForm({
   sport,
@@ -105,21 +114,25 @@ export function BetForm({
     return map;
   }, [slate, runs, now]);
 
-  const startedTeamIds = useMemo(() => {
+  const lockedPickIds = useMemo(() => {
     const set = new Set<number>();
     if (!slate) return set;
     for (const g of slate.games) {
       if (lockInfoByGame.get(g.id)?.locked) {
-        set.add(g.away.id);
-        set.add(g.home.id);
+        if (isNbaSlateGame(g)) {
+          for (const player of g.players) set.add(player.id);
+        } else {
+          set.add(g.away.id);
+          set.add(g.home.id);
+        }
       }
     }
     return set;
   }, [slate, lockInfoByGame]);
 
   const effectivePicks = useMemo(
-    () => picks.filter((p) => !startedTeamIds.has(p.id)),
-    [picks, startedTeamIds],
+    () => picks.filter((p) => !lockedPickIds.has(p.id)),
+    [picks, lockedPickIds],
   );
   const droppedPicks = picks.length - effectivePicks.length;
 
@@ -151,8 +164,10 @@ export function BetForm({
     [nTeams, lambda, target, zoneLow, pickLimits.min],
   );
 
-  function togglePick(team: AnyTeamEntry, gameId: string) {
-    if (startedTeamIds.has(team.id)) return;
+  const selectedIds = useMemo(() => new Set(picks.map((p) => p.id)), [picks]);
+
+  function togglePick(team: AnyPickEntry, gameId: string) {
+    if (lockedPickIds.has(team.id)) return;
     setPlacedBet(null);
     const game = slate?.games.find((g) => g.id === gameId);
     setPicks((prev) => {
@@ -160,7 +175,7 @@ export function BetForm({
         return prev.filter((p) => p.id !== team.id);
       }
       const effectiveCount = prev.filter(
-        (p) => !startedTeamIds.has(p.id),
+        (p) => !lockedPickIds.has(p.id),
       ).length;
       if (effectiveCount >= pickLimits.max) return prev;
       return [
@@ -224,13 +239,29 @@ export function BetForm({
       day={day}
       meta={`${slate.date} \u00b7 ${slate.games.length} game${slate.games.length === 1 ? "" : "s"}`}
     >
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className={sport === "nba" ? "mt-6 grid gap-4" : "mt-6 grid gap-3 sm:grid-cols-2"}>
         {(slate.games as AnySlateGame[]).map((g) => {
-          const awaySelected = picks.some((p) => p.id === g.away.id);
-          const homeSelected = picks.some((p) => p.id === g.home.id);
           const info = lockInfoByGame.get(g.id);
           const started = info?.locked ?? false;
           const reason = started ? "Game has started \u2014 picks locked" : undefined;
+          if (isNbaSlateGame(g)) {
+            return (
+              <PlayerGameCard
+                key={g.id}
+                game={g}
+                selectedIds={selectedIds}
+                locked={started}
+                disabledReason={reason}
+                awayScore={runs.get(g.away.id) ?? null}
+                homeScore={runs.get(g.home.id) ?? null}
+                playerScores={runs}
+                msUntilLock={info?.msUntilLock ?? null}
+                onTogglePlayer={togglePick}
+              />
+            );
+          }
+          const awaySelected = picks.some((p) => p.id === g.away.id);
+          const homeSelected = picks.some((p) => p.id === g.home.id);
           return (
             <GameCard
               key={g.id}
@@ -266,6 +297,7 @@ export function BetForm({
         placedBet={placedBet}
         onDismissConfirmation={() => setPlacedBet(null)}
         pickLimits={pickLimits}
+        sport={sport}
       />
     </Shell>
   );
@@ -349,6 +381,7 @@ function BetControls({
   placedBet,
   onDismissConfirmation,
   pickLimits,
+  sport,
 }: {
   picks: Pick[];
   stakes: number[];
@@ -364,8 +397,10 @@ function BetControls({
   placedBet: PlacedBetConfirmation | null;
   onDismissConfirmation: () => void;
   pickLimits: { min: number; max: number };
+  sport: Sport;
 }) {
   const nTeams = picks.length;
+  const pickNoun = sport === "nba" ? "players" : "teams";
   return (
     <div className="mt-6 border-t border-zinc-800 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -375,7 +410,7 @@ function BetControls({
           </p>
           <p className="mt-1 text-sm">
             <span className="text-zinc-100">{nTeams}</span>
-            <span className="text-zinc-500"> / {pickLimits.max} teams</span>
+            <span className="text-zinc-500"> / {pickLimits.max} {pickNoun}</span>
             {nTeams < pickLimits.min ? (
               <span className="ml-2 text-zinc-500">
                 ({pickLimits.min - nTeams} more to submit)
@@ -474,6 +509,7 @@ function BetControls({
           placedBet={placedBet}
           onDismiss={onDismissConfirmation}
           pickLimits={pickLimits}
+          pickNoun={pickNoun}
         />
       ) : null}
 
@@ -507,10 +543,12 @@ function PlacedBetNotice({
   placedBet,
   onDismiss,
   pickLimits,
+  pickNoun,
 }: {
   placedBet: PlacedBetConfirmation;
   onDismiss: () => void;
   pickLimits: { min: number; max: number };
+  pickNoun: "teams" | "players";
 }) {
   const remainingHits = pickLimits.max - placedBet.teamCount;
   const hitCutoff =
@@ -518,7 +556,10 @@ function PlacedBetNotice({
       ? "before the 1st half ends"
       : placedBet.sport === "nhl"
       ? "before the 2nd period begins"
+      : placedBet.sport === "nba"
+      ? "before the 2nd quarter begins"
       : "before the 4th inning begins";
+  const singlePickNoun = pickNoun === "players" ? "player" : "team";
   const potentialWin = placedBet.potentialWin.toFixed(
     placedBet.potentialWin % 1 === 0 ? 0 : 1,
   );
@@ -534,7 +575,7 @@ function PlacedBetNotice({
             Bet placed
           </p>
           <p className="mt-1 text-sm text-zinc-400">
-            {placedBet.teamCount}-team ticket · {placedBet.stake} token
+            {placedBet.teamCount}-{singlePickNoun} ticket · {placedBet.stake} token
             {placedBet.stake === 1 ? "" : "s"} staked
           </p>
         </div>
@@ -563,13 +604,13 @@ function PlacedBetNotice({
         <p className="text-sm text-zinc-400">
           {remainingHits > 0 ? (
             <>
-              Want another team? Open <span className="text-zinc-200">My Bets</span> and
+              Want another {singlePickNoun}? Open <span className="text-zinc-200">My Bets</span> and
               tap <span className="text-amber-200">Hit</span>. You can add up to{" "}
               {remainingHits} more for 25% of the original stake each, as long as
-              that team&apos;s game is {hitCutoff}.
+              that {singlePickNoun}&apos;s game is {hitCutoff}.
             </>
           ) : (
-            <>This ticket already has {pickLimits.max} teams, so Hit is maxed out.</>
+            <>This ticket already has {pickLimits.max} {pickNoun}, so Hit is maxed out.</>
           )}
         </p>
         <Link

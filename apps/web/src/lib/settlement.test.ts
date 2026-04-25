@@ -5,6 +5,7 @@ import {
   computeBetProgress,
   deriveInstantBust,
   deriveSettlement,
+  extractNbaThreePointersMap,
   extractSoccerGoalsMap,
   extractRunsMap,
   type RunsMap,
@@ -220,6 +221,40 @@ describe("extractSoccerGoalsMap", () => {
     expect(map.get(7318)?.status).toBe("final");
     expect(map.get(7318)?.period).toBe(2);
     expect(map.get(7318)?.periodClock).toBe("90'+4'");
+  });
+});
+
+describe("extractNbaThreePointersMap", () => {
+  it("parses ESPN NBA 3PT stat strings into made threes", () => {
+    const map = extractNbaThreePointersMap({
+      header: {
+        competitions: [
+          {
+            id: "401869404",
+            status: { period: 4, displayClock: "0.0", type: { state: "post", completed: true, description: "Final" } },
+          },
+        ],
+      },
+      boxscore: {
+        players: [
+          {
+            team: { id: "2", abbreviation: "BOS" },
+            statistics: [
+              {
+                labels: ["MIN", "PTS", "FG", "3PT", "FT"],
+                athletes: [
+                  { athlete: { id: "4065648", displayName: "Jayson Tatum" }, stats: ["42", "25", "9-17", "5-9", "2-3"] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(map.get(4065648)?.runs).toBe(5);
+    expect(map.get(4065648)?.status).toBe("final");
+    expect(map.get(4065648)?.period).toBe(4);
   });
 });
 
