@@ -13,6 +13,8 @@ import {
   lambdaFor,
   pickLimitsFor,
   previewTable,
+  targetFor,
+  zoneLowFor,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
 import type {
@@ -22,6 +24,9 @@ import type {
   Slate,
   SlateDay,
   SlateGame,
+  SoccerSlate,
+  SoccerSlateGame,
+  SoccerTeamEntry,
   TeamEntry,
 } from "@/lib/slate";
 import type { RunsMap } from "@/lib/settlement";
@@ -29,9 +34,9 @@ import { scoreKey, type Sport } from "@/lib/sport";
 import { GameCard } from "./_game-card";
 
 type Pick = BetTeam;
-type AnySlate = Slate | NhlSlate;
-type AnySlateGame = SlateGame | NhlSlateGame;
-type AnyTeamEntry = TeamEntry | NhlTeamEntry;
+type AnySlate = Slate | NhlSlate | SoccerSlate;
+type AnySlateGame = SlateGame | NhlSlateGame | SoccerSlateGame;
+type AnyTeamEntry = TeamEntry | NhlTeamEntry | SoccerTeamEntry;
 type PlacedBetConfirmation = {
   id: string;
   sport: Sport;
@@ -40,7 +45,11 @@ type PlacedBetConfirmation = {
   potentialWin: number;
 };
 
-const SPORT_LABELS: Record<Sport, string> = { mlb: "MLB", nhl: "NHL" };
+const SPORT_LABELS: Record<Sport, string> = {
+  mlb: "MLB",
+  nhl: "NHL",
+  soccer: "MLS",
+};
 
 export function BetForm({
   sport,
@@ -117,6 +126,8 @@ export function BetForm({
   const effectiveStake = stakes.includes(stake) ? stake : (stakes[0] ?? 1);
   const nTeams = effectivePicks.length;
   const pickLimits = useMemo(() => pickLimitsFor(sport), [sport]);
+  const target = useMemo(() => targetFor(sport), [sport]);
+  const zoneLow = useMemo(() => zoneLowFor(sport), [sport]);
   const canSubmit =
     nTeams >= pickLimits.min &&
     nTeams <= pickLimits.max &&
@@ -127,12 +138,17 @@ export function BetForm({
   const lambda = useMemo(() => lambdaFor(sport), [sport]);
   const preview = useMemo(
     () =>
-      nTeams >= pickLimits.min ? previewTable(nTeams, effectiveStake, lambda) : [],
-    [nTeams, effectiveStake, lambda, pickLimits.min],
+      nTeams >= pickLimits.min
+        ? previewTable(nTeams, effectiveStake, lambda, effectiveStake, target, zoneLow)
+        : [],
+    [nTeams, effectiveStake, lambda, target, zoneLow, pickLimits.min],
   );
   const probs = useMemo(
-    () => (nTeams >= pickLimits.min ? handProbabilities(nTeams, lambda) : null),
-    [nTeams, lambda, pickLimits.min],
+    () =>
+      nTeams >= pickLimits.min
+        ? handProbabilities(nTeams, lambda, target, zoneLow)
+        : null,
+    [nTeams, lambda, target, zoneLow, pickLimits.min],
   );
 
   function togglePick(team: AnyTeamEntry, gameId: string) {
@@ -407,7 +423,9 @@ function BetControls({
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
               If your total lands on
             </p>
-            <div className="mt-2 grid grid-cols-7 gap-1 text-center">
+            <div
+              className={`mt-2 grid gap-1 text-center ${preview.length === 4 ? "grid-cols-4" : "grid-cols-7"}`}
+            >
               {preview.map((row) => (
                 <div
                   key={row.total}
@@ -496,7 +514,9 @@ function PlacedBetNotice({
 }) {
   const remainingHits = pickLimits.max - placedBet.teamCount;
   const hitCutoff =
-    placedBet.sport === "nhl"
+    placedBet.sport === "soccer"
+      ? "before the 1st half ends"
+      : placedBet.sport === "nhl"
       ? "before the 2nd period begins"
       : "before the 4th inning begins";
   const potentialWin = placedBet.potentialWin.toFixed(

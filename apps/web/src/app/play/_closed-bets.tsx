@@ -64,9 +64,11 @@ export function ClosedBets() {
 
 function SportBadge({ sport }: { sport: Sport }) {
   const cls =
-    sport === "nhl"
+    sport === "soccer"
+      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+      : sport === "nhl"
       ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
-      : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+      : "border-lime-400/40 bg-lime-400/10 text-lime-200";
   return (
     <span
       className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${cls}`}

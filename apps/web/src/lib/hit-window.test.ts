@@ -89,3 +89,22 @@ describe("isTeamHitEligible — NHL", () => {
     expect(isTeamHitEligible("nhl", score(1, { status: "voided" }))).toBe(false);
   });
 });
+
+describe("isTeamHitEligible — Soccer", () => {
+  it("treats a missing score as scheduled and eligible", () => {
+    expect(isTeamHitEligible("soccer", undefined)).toBe(true);
+  });
+
+  it("is eligible before and during the 1st half", () => {
+    expect(isTeamHitEligible("soccer", score(1, { status: "scheduled" }))).toBe(true);
+    expect(
+      isTeamHitEligible("soccer", score(1, { status: "live", period: 1 })),
+    ).toBe(true);
+  });
+
+  it("is not eligible once the 2nd half begins", () => {
+    expect(
+      isTeamHitEligible("soccer", score(1, { status: "live", period: 2 })),
+    ).toBe(false);
+  });
+});

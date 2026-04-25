@@ -4,6 +4,8 @@ import type {
   NhlSlateGame,
   NhlTeamEntry,
   SlateGame,
+  SoccerSlateGame,
+  SoccerTeamEntry,
   TeamEntry,
 } from "@/lib/slate";
 import type { TeamScore } from "@/lib/settlement";
@@ -11,8 +13,8 @@ import type { Sport } from "@/lib/sport";
 import { formatNhlPeriodOrdinal } from "@/lib/settlement";
 import { getTeamColor } from "@/lib/team-colors";
 
-type AnyGame = SlateGame | NhlSlateGame;
-type AnyTeamEntry = TeamEntry | NhlTeamEntry;
+type AnyGame = SlateGame | NhlSlateGame | SoccerSlateGame;
+type AnyTeamEntry = TeamEntry | NhlTeamEntry | SoccerTeamEntry;
 
 interface GameCardProps {
   sport: Sport;
@@ -136,6 +138,10 @@ function CardHeader({
         formatNhlPeriodOrdinal(source.period ?? null) ?? "";
       const clock = source.periodClock ? ` ${source.periodClock}` : "";
       liveLabel = `Live ${ord}${clock}`.trim();
+    } else if (sport === "soccer") {
+      const half = source.period === 2 ? "2nd half" : "1st half";
+      const clock = source.periodClock ? ` ${source.periodClock}` : "";
+      liveLabel = `Live ${half}${clock}`.trim();
     } else {
       const ord = source.inningOrdinal ?? `${source.inning ?? ""}`;
       const half = source.inningHalf === "Top" ? "\u25B2" : "\u25BC";
@@ -207,6 +213,10 @@ function isMlbTeam(team: AnyTeamEntry): team is TeamEntry {
   return "pitcher" in team;
 }
 
+function isNhlTeam(team: AnyTeamEntry): team is NhlTeamEntry {
+  return "goalies" in team;
+}
+
 function TeamRow({
   sport,
   team,
@@ -219,12 +229,12 @@ function TeamRow({
   score,
   onToggle,
 }: TeamRowProps) {
-  const scoreUnit = sport === "nhl" ? "Goals" : "Runs";
+  const scoreUnit = sport === "mlb" ? "Runs" : "Goals";
   const hasMeta =
     !showScore &&
     (isMlbTeam(team)
       ? Boolean(team.pitcher || team.era)
-      : team.goalies.length > 0);
+      : isNhlTeam(team) && team.goalies.length > 0);
   const base =
     "w-full flex items-center justify-between px-4 py-4 transition-all duration-200 text-left";
   const borderCls = hasBorder ? "border-b border-zinc-800/60" : "";
@@ -294,7 +304,7 @@ function TeamRow({
               </div>
             ) : null}
           </div>
-        ) : (
+        ) : isNhlTeam(team) ? (
           <div className="text-right">
             <div className="mb-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
               Goalies
@@ -310,7 +320,7 @@ function TeamRow({
               </div>
             ))}
           </div>
-        )
+        ) : null
       ) : null}
     </button>
   );

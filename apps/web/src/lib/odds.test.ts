@@ -7,25 +7,41 @@ import {
   HIT_COST_FRAC,
   LAMBDA_MLB,
   LAMBDA_NHL,
+  LAMBDA_SOCCER,
   lambdaFor,
   pickLimitsFor,
   payoutForTotal,
   previewTable,
   settleBet,
+  SOCCER_TARGET,
+  SOCCER_ZONE_LOW,
   TARGET,
   TARGET_HOLD,
+  targetFor,
   ZONE_LOW,
+  zoneLowFor,
 } from "./odds";
 
 describe("lambda constants", () => {
   it("exposes the canonical per-sport lambdas", () => {
     expect(LAMBDA_MLB).toBe(4.6);
     expect(LAMBDA_NHL).toBe(3.0);
+    expect(LAMBDA_SOCCER).toBe(1.35);
   });
 
   it("lambdaFor returns the right value per sport", () => {
     expect(lambdaFor("mlb")).toBe(LAMBDA_MLB);
     expect(lambdaFor("nhl")).toBe(LAMBDA_NHL);
+    expect(lambdaFor("soccer")).toBe(LAMBDA_SOCCER);
+  });
+});
+
+describe("sport-specific targets", () => {
+  it("keeps MLB/NHL on 21 and moves soccer to Pitch 11", () => {
+    expect(targetFor("mlb")).toBe(TARGET);
+    expect(targetFor("nhl")).toBe(TARGET);
+    expect(targetFor("soccer")).toBe(SOCCER_TARGET);
+    expect(zoneLowFor("soccer")).toBe(SOCCER_ZONE_LOW);
   });
 });
 
@@ -36,6 +52,10 @@ describe("sport-specific pick limits", () => {
 
   it("sets Ice 21 to 4-8 teams", () => {
     expect(pickLimitsFor("nhl")).toEqual({ min: 4, max: 8 });
+  });
+
+  it("sets Pitch 11 to 5-9 teams", () => {
+    expect(pickLimitsFor("soccer")).toEqual({ min: 5, max: 9 });
   });
 });
 
@@ -90,6 +110,28 @@ describe("NHL lambda behavior", () => {
     expect(settleBet(4, 22, 10, LAMBDA_NHL).status).toBe("bust");
     expect(settleBet(4, 21, 10, LAMBDA_NHL).status).toBe("bj");
     expect(settleBet(4, 18, 10, LAMBDA_NHL).status).toBe("win");
+  });
+});
+
+describe("Pitch 11 behavior", () => {
+  it("renders an 8-11 payout table with 11 as blackjack", () => {
+    const rows = previewTable(
+      7,
+      10,
+      LAMBDA_SOCCER,
+      10,
+      SOCCER_TARGET,
+      SOCCER_ZONE_LOW,
+    );
+    expect(rows.map((r) => r.total)).toEqual([8, 9, 10, 11]);
+    expect(rows[rows.length - 1]?.isBj).toBe(true);
+  });
+
+  it("classifies soccer short/win/bj/bust around target 11", () => {
+    expect(settleBet(7, 7, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("short");
+    expect(settleBet(7, 8, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("win");
+    expect(settleBet(7, 11, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("bj");
+    expect(settleBet(7, 12, 10, LAMBDA_SOCCER, 10, 11, 8).status).toBe("bust");
   });
 });
 

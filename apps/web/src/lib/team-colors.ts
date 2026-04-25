@@ -70,6 +70,7 @@ const NHL_TEAM_COLORS: Record<string, string> = {
 };
 
 export function getTeamColor(abbr: string, sport: Sport = "mlb"): string {
+  if (sport === "soccer") return "bg-emerald-700";
   const map = sport === "nhl" ? NHL_TEAM_COLORS : MLB_TEAM_COLORS;
   return map[abbr] ?? "bg-zinc-800";
 }

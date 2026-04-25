@@ -15,9 +15,9 @@ type ScoresPayload = {
 export type ScoreTarget = { sport: Sport; date: string };
 
 function endpointFor(sport: Sport, date: string): string {
-  return sport === "nhl"
-    ? `/api/scores/nhl?date=${date}`
-    : `/api/scores?date=${date}`;
+  if (sport === "nhl") return `/api/scores/nhl?date=${date}`;
+  if (sport === "soccer") return `/api/scores/soccer?date=${date}`;
+  return `/api/scores?date=${date}`;
 }
 
 function dedupeTargets(targets: ScoreTarget[]): ScoreTarget[] {

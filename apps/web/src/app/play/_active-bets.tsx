@@ -10,8 +10,8 @@ import {
   lambdaFor,
   pickLimitsFor,
   payoutForTotal,
-  ZONE_LOW,
-  TARGET,
+  targetFor,
+  zoneLowFor,
 } from "@/lib/odds";
 import {
   computeBetProgress,
@@ -148,7 +148,9 @@ function BetRow({
   balance: number;
 }) {
   const lambda = lambdaFor(bet.sport);
-  const probs = handProbabilities(bet.teams.length, lambda);
+  const target = targetFor(bet.sport);
+  const zoneLow = zoneLowFor(bet.sport);
+  const probs = handProbabilities(bet.teams.length, lambda, target, zoneLow);
   const progress = computeBetProgress(bet, runs);
   const placed = new Date(bet.createdAt).toLocaleTimeString(undefined, {
     hour: "numeric",
@@ -164,17 +166,17 @@ function BetRow({
     !canSettle &&
     bet.teams.length < pickLimits.max &&
     balance >= hitCost;
-  const totalLabel = `${progress.liveTotal} / 21`;
+  const totalLabel = `${progress.liveTotal} / ${target}`;
   const totalTint =
-    progress.liveTotal > 21
+    progress.liveTotal > target
       ? "text-rose-300"
-      : progress.liveTotal === 21
+      : progress.liveTotal === target
         ? "text-emerald-300"
-        : progress.liveTotal >= 15
+        : progress.liveTotal >= zoneLow
           ? "text-amber-200"
           : "text-zinc-200";
   const inZone =
-    progress.liveTotal >= ZONE_LOW && progress.liveTotal <= TARGET;
+    progress.liveTotal >= zoneLow && progress.liveTotal <= target;
   const livePayout = progress.allVoided
     ? bet.baseStake
     : inZone
@@ -184,11 +186,13 @@ function BetRow({
           bet.baseStake,
           lambda,
           bet.stake,
+          target,
+          zoneLow,
         )
       : 0;
   const payoutTint = progress.allVoided
     ? "text-zinc-200"
-    : progress.liveTotal === TARGET
+    : progress.liveTotal === target
       ? "text-emerald-300"
       : inZone
         ? "text-amber-200"
@@ -300,9 +304,11 @@ function BetRow({
 
 function SportBadge({ sport }: { sport: Sport }) {
   const cls =
-    sport === "nhl"
+    sport === "soccer"
+      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+      : sport === "nhl"
       ? "border-sky-400/40 bg-sky-400/10 text-sky-200"
-      : "border-emerald-400/40 bg-emerald-400/10 text-emerald-200";
+      : "border-lime-400/40 bg-lime-400/10 text-lime-200";
   return (
     <span
       className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.15em] ${cls}`}

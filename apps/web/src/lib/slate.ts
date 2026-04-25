@@ -12,6 +12,7 @@ import {
   pickScheduledDay,
   type NhlGoalie,
 } from "./nhl";
+import { fetchSoccerScoreboard, type SoccerCompetitor } from "./soccer";
 
 export type TeamEntry = {
   id: number;
@@ -54,6 +55,26 @@ export type NhlSlateGame = {
 export type NhlSlate = {
   date: string;
   games: NhlSlateGame[];
+};
+
+export type SoccerTeamEntry = {
+  id: number;
+  abbr: string;
+  name: string;
+};
+
+export type SoccerSlateGame = {
+  id: string;
+  startsAtIso: string;
+  timeLabel: string;
+  venue: string;
+  away: SoccerTeamEntry;
+  home: SoccerTeamEntry;
+};
+
+export type SoccerSlate = {
+  date: string;
+  games: SoccerSlateGame[];
 };
 
 export type SlateDay = "today" | "tomorrow";
@@ -192,5 +213,45 @@ export async function getTodayNhlSlate(date?: string): Promise<NhlSlate> {
     })
     .sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso));
 
+  return { date: isoDate, games };
+}
+
+function soccerTeamEntry(c: SoccerCompetitor): SoccerTeamEntry | null {
+  const id = Number(c.team?.id ?? c.id);
+  if (!Number.isFinite(id)) return null;
+  const abbr = c.team?.abbreviation ?? String(id);
+  return {
+    id,
+    abbr,
+    name: c.team?.displayName ?? c.team?.shortDisplayName ?? c.team?.name ?? abbr,
+  };
+}
+
+export async function getTodaySoccerSlate(date?: string): Promise<SoccerSlate> {
+  const isoDate = date ?? getTodayIsoDateEt();
+  const scoreboard = await fetchSoccerScoreboard(isoDate);
+
+  const games: SoccerSlateGame[] = [];
+  for (const event of scoreboard.events ?? []) {
+    const competition = event.competitions?.[0];
+    if (!competition) continue;
+    const awayRaw = competition.competitors?.find((c) => c.homeAway === "away");
+    const homeRaw = competition.competitors?.find((c) => c.homeAway === "home");
+    if (!awayRaw || !homeRaw) continue;
+    const away = soccerTeamEntry(awayRaw);
+    const home = soccerTeamEntry(homeRaw);
+    if (!away || !home) continue;
+    const startsAtIso = competition.startDate ?? competition.date ?? event.date;
+    games.push({
+      id: String(competition.id ?? event.id),
+      startsAtIso,
+      timeLabel: formatEtTime(startsAtIso),
+      venue: competition.venue?.fullName ?? event.venue?.displayName ?? "",
+      away,
+      home,
+    });
+  }
+
+  games.sort((a, b) => a.startsAtIso.localeCompare(b.startsAtIso));
   return { date: isoDate, games };
 }

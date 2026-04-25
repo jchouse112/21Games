@@ -1,7 +1,14 @@
 import type { ScheduleResponse } from "./mlb";
 import type { NhlScoreResponse } from "./nhl";
+import type { SoccerScoreboardResponse, SoccerStatus } from "./soccer";
 import type { Bet } from "./bets";
-import { lambdaFor, settleBet as settleBetOdds, type Outcome } from "./odds";
+import {
+  lambdaFor,
+  settleBet as settleBetOdds,
+  targetFor,
+  type Outcome,
+  zoneLowFor,
+} from "./odds";
 
 export type GameStatus = "scheduled" | "live" | "final" | "voided";
 
@@ -133,13 +140,15 @@ export function deriveSettlement(bet: Bet, runs: RunsMap): SettlementResult {
     bet.baseStake,
     lambdaFor(bet.sport),
     bet.stake,
+    targetFor(bet.sport),
+    zoneLowFor(bet.sport),
   );
   return { kind: "settled", outcome };
 }
 
 export function deriveInstantBust(bet: Bet, runs: RunsMap): Outcome | null {
   const p = computeBetProgress(bet, runs);
-  if (p.liveTotal < 22) return null;
+  if (p.liveTotal <= targetFor(bet.sport)) return null;
   return { status: "bust", total: p.liveTotal, basePoints: 0, payout: 0 };
 }
 
@@ -218,3 +227,61 @@ export function extractGoalsMap(score: NhlScoreResponse): RunsMap {
 }
 
 export { periodOrdinal as formatNhlPeriodOrdinal };
+
+export function classifySoccerStatus(status?: SoccerStatus): GameStatus {
+  const type = status?.type;
+  const state = (type?.state ?? "").toLowerCase();
+  const text = [type?.description, type?.detail, type?.shortDetail]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  if (
+    text.includes("postponed") ||
+    text.includes("cancelled") ||
+    text.includes("canceled") ||
+    text.includes("suspended")
+  ) {
+    return "voided";
+  }
+  if (type?.completed || state === "post" || text.includes("full time")) {
+    return "final";
+  }
+  if (state === "pre" || text.includes("scheduled")) return "scheduled";
+  if (state === "in") return "live";
+  return "scheduled";
+}
+
+function parseSoccerScore(score: string | undefined): number {
+  const n = Number(score ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function extractSoccerGoalsMap(scoreboard: SoccerScoreboardResponse): RunsMap {
+  const map: RunsMap = new Map();
+  for (const event of scoreboard.events ?? []) {
+    const competition = event.competitions?.[0];
+    if (!competition) continue;
+    const status = classifySoccerStatus(competition.status ?? event.status);
+    const isPlayed = status === "live" || status === "final";
+    const period = competition.status?.period ?? event.status?.period ?? null;
+    const clock =
+      competition.status?.displayClock ?? event.status?.displayClock ?? null;
+    const gamePk = Number(competition.id ?? event.id);
+    for (const c of competition.competitors ?? []) {
+      const id = Number(c.team?.id ?? c.id);
+      if (!Number.isFinite(id)) continue;
+      map.set(id, {
+        teamId: id,
+        gamePk,
+        runs: isPlayed ? parseSoccerScore(c.score) : 0,
+        status,
+        inning: null,
+        inningOrdinal: null,
+        inningHalf: null,
+        period,
+        periodClock: clock,
+      });
+    }
+  }
+  return map;
+}

@@ -5,18 +5,19 @@ import {
   computeBetProgress,
   deriveInstantBust,
   deriveSettlement,
+  extractSoccerGoalsMap,
   extractRunsMap,
   type RunsMap,
 } from "./settlement";
 import type { Bet } from "./bets";
 import type { ScheduleGame, ScheduleResponse } from "./mlb";
-import { payoutForTotal, TARGET, ZONE_LOW } from "./odds";
+import { payoutForTotal, SOCCER_TARGET, TARGET, ZONE_LOW } from "./odds";
 
-function makeBet(teamIds: number[], stake = 10): Bet {
+function makeBet(teamIds: number[], stake = 10, sport: Bet["sport"] = "mlb"): Bet {
   return {
     id: "bet-1",
     userId: "u1",
-    sport: "mlb",
+    sport,
     slateDate: "2026-04-18",
     teams: teamIds.map((id, i) => ({
       id,
@@ -192,6 +193,36 @@ describe("extractRunsMap", () => {
   });
 });
 
+describe("extractSoccerGoalsMap", () => {
+  it("maps ESPN MLS competitors to team goals and final status", () => {
+    const map = extractSoccerGoalsMap({
+      events: [
+        {
+          id: "761570",
+          date: "2026-04-18T17:00Z",
+          status: { type: { state: "post", completed: true, description: "Full Time" } },
+          competitions: [
+            {
+              id: "761570",
+              status: { period: 2, displayClock: "90'+4'", type: { state: "post", completed: true, description: "Full Time" } },
+              competitors: [
+                { homeAway: "home", score: "3", team: { id: "7318", abbreviation: "TOR" } },
+                { homeAway: "away", score: "1", team: { id: "18418", abbreviation: "ATL" } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(map.get(7318)?.runs).toBe(3);
+    expect(map.get(18418)?.runs).toBe(1);
+    expect(map.get(7318)?.status).toBe("final");
+    expect(map.get(7318)?.period).toBe(2);
+    expect(map.get(7318)?.periodClock).toBe("90'+4'");
+  });
+});
+
 describe("computeBetProgress", () => {
   it("sums runs across final + live, flags not-yet-final", () => {
     const bet = makeBet([1, 2, 3]);
@@ -343,6 +374,17 @@ describe("deriveSettlement", () => {
       expect(result.outcome.status).toBe("short");
     }
   });
+
+  it("settles soccer against Pitch 11 instead of 21", () => {
+    const bet = makeBet([1, 2, 3, 4, 5], 10, "soccer");
+    const runs = buildMockRunsMap(bet, { 1: 2, 2: 2, 3: 3, 4: 2, 5: 2 });
+    const result = deriveSettlement(bet, runs);
+    expect(result.kind).toBe("settled");
+    if (result.kind === "settled") {
+      expect(result.outcome.status).toBe("bj");
+      expect(result.outcome.total).toBe(SOCCER_TARGET);
+    }
+  });
 });
 
 describe("deriveInstantBust", () => {
@@ -388,6 +430,17 @@ describe("deriveInstantBust", () => {
       [2, { teamId: 2, gamePk: 11, runs: 5, status: "live", inning: 5, inningOrdinal: "5th", inningHalf: "Top" }],
     ]);
     expect(deriveInstantBust(bet, runs)).toBeNull();
+  });
+
+  it("uses 12 as the soccer instant-bust threshold", () => {
+    const bet = makeBet([1, 2, 3, 4, 5], 10, "soccer");
+    expect(deriveInstantBust(bet, buildMockRunsMap(bet, { 1: 4, 2: 3, 3: 2, 4: 1, 5: 1 }))).toBeNull();
+    const result = deriveInstantBust(
+      bet,
+      buildMockRunsMap(bet, { 1: 4, 2: 3, 3: 2, 4: 2, 5: 1 }),
+    );
+    expect(result?.status).toBe("bust");
+    expect(result?.total).toBe(12);
   });
 });
 
