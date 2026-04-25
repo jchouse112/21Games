@@ -6,9 +6,9 @@ import { useDevUser } from "@/lib/use-dev-user";
 import { useLiveScores } from "@/lib/use-live-scores";
 import {
   HIT_COST_FRAC,
-  MAX_TEAMS,
   handProbabilities,
   lambdaFor,
+  pickLimitsFor,
   payoutForTotal,
   ZONE_LOW,
   TARGET,
@@ -159,9 +159,10 @@ function BetRow({
     (p) => p.score != null && p.score.status !== "scheduled",
   );
   const hitCost = bet.baseStake * HIT_COST_FRAC;
+  const pickLimits = pickLimitsFor(bet.sport);
   const canHit =
     !canSettle &&
-    bet.teams.length < MAX_TEAMS &&
+    bet.teams.length < pickLimits.max &&
     balance >= hitCost;
   const totalLabel = `${progress.liveTotal} / 21`;
   const totalTint =

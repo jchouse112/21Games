@@ -15,7 +15,7 @@ import {
   type BetHit,
   type BetTeam,
 } from "./bets";
-import { committedRatio, HIT_COST_FRAC, MAX_TEAMS } from "./odds";
+import { committedRatio, HIT_COST_FRAC, pickLimitsFor } from "./odds";
 import { DEFAULT_SPORT, isSport } from "./sport";
 import { useDevUser } from "./use-dev-user";
 
@@ -157,7 +157,9 @@ export function BetsProvider({ children }: { children: ReactNode }) {
       const bet = current.find((b) => b.id === id);
       if (!bet) return { ok: false, reason: "bet-not-found" };
       if (bet.status !== "open") return { ok: false, reason: "bet-closed" };
-      if (bet.teams.length >= MAX_TEAMS) return { ok: false, reason: "max-teams" };
+      if (bet.teams.length >= pickLimitsFor(bet.sport).max) {
+        return { ok: false, reason: "max-teams" };
+      }
       if (bet.teams.some((t) => t.id === team.id)) {
         return { ok: false, reason: "duplicate-team" };
       }

@@ -9,10 +9,9 @@ import { useLiveScores } from "@/lib/use-live-scores";
 import { useClock } from "@/lib/use-clock";
 import { isPickLocked, msUntilPickLock } from "@/lib/pick-lock";
 import {
-  MAX_TEAMS,
-  MIN_TEAMS,
   handProbabilities,
   lambdaFor,
+  pickLimitsFor,
   previewTable,
 } from "@/lib/odds";
 import { generateBetId, type BetTeam } from "@/lib/bets";
@@ -117,9 +116,10 @@ export function BetForm({
 
   const effectiveStake = stakes.includes(stake) ? stake : (stakes[0] ?? 1);
   const nTeams = effectivePicks.length;
+  const pickLimits = useMemo(() => pickLimitsFor(sport), [sport]);
   const canSubmit =
-    nTeams >= MIN_TEAMS &&
-    nTeams <= MAX_TEAMS &&
+    nTeams >= pickLimits.min &&
+    nTeams <= pickLimits.max &&
     effectiveStake <= state.balance &&
     slate !== null &&
     slate.games.length > 0;
@@ -127,12 +127,12 @@ export function BetForm({
   const lambda = useMemo(() => lambdaFor(sport), [sport]);
   const preview = useMemo(
     () =>
-      nTeams >= MIN_TEAMS ? previewTable(nTeams, effectiveStake, lambda) : [],
-    [nTeams, effectiveStake, lambda],
+      nTeams >= pickLimits.min ? previewTable(nTeams, effectiveStake, lambda) : [],
+    [nTeams, effectiveStake, lambda, pickLimits.min],
   );
   const probs = useMemo(
-    () => (nTeams >= MIN_TEAMS ? handProbabilities(nTeams, lambda) : null),
-    [nTeams, lambda],
+    () => (nTeams >= pickLimits.min ? handProbabilities(nTeams, lambda) : null),
+    [nTeams, lambda, pickLimits.min],
   );
 
   function togglePick(team: AnyTeamEntry, gameId: string) {
@@ -146,7 +146,7 @@ export function BetForm({
       const effectiveCount = prev.filter(
         (p) => !startedTeamIds.has(p.id),
       ).length;
-      if (effectiveCount >= MAX_TEAMS) return prev;
+      if (effectiveCount >= pickLimits.max) return prev;
       return [
         ...prev,
         {
@@ -249,6 +249,7 @@ export function BetForm({
         droppedCount={droppedPicks}
         placedBet={placedBet}
         onDismissConfirmation={() => setPlacedBet(null)}
+        pickLimits={pickLimits}
       />
     </Shell>
   );
@@ -331,6 +332,7 @@ function BetControls({
   droppedCount,
   placedBet,
   onDismissConfirmation,
+  pickLimits,
 }: {
   picks: Pick[];
   stakes: number[];
@@ -345,6 +347,7 @@ function BetControls({
   droppedCount: number;
   placedBet: PlacedBetConfirmation | null;
   onDismissConfirmation: () => void;
+  pickLimits: { min: number; max: number };
 }) {
   const nTeams = picks.length;
   return (
@@ -356,10 +359,10 @@ function BetControls({
           </p>
           <p className="mt-1 text-sm">
             <span className="text-zinc-100">{nTeams}</span>
-            <span className="text-zinc-500"> / {MAX_TEAMS} teams</span>
-            {nTeams < MIN_TEAMS ? (
+            <span className="text-zinc-500"> / {pickLimits.max} teams</span>
+            {nTeams < pickLimits.min ? (
               <span className="ml-2 text-zinc-500">
-                ({MIN_TEAMS - nTeams} more to submit)
+                ({pickLimits.min - nTeams} more to submit)
               </span>
             ) : null}
             {droppedCount > 0 ? (
@@ -444,6 +447,7 @@ function BetControls({
         <PlacedBetNotice
           placedBet={placedBet}
           onDismiss={onDismissConfirmation}
+          pickLimits={pickLimits}
         />
       ) : null}
 
@@ -476,11 +480,13 @@ function BetControls({
 function PlacedBetNotice({
   placedBet,
   onDismiss,
+  pickLimits,
 }: {
   placedBet: PlacedBetConfirmation;
   onDismiss: () => void;
+  pickLimits: { min: number; max: number };
 }) {
-  const remainingHits = MAX_TEAMS - placedBet.teamCount;
+  const remainingHits = pickLimits.max - placedBet.teamCount;
   const hitCutoff =
     placedBet.sport === "nhl"
       ? "before the 2nd period begins"
@@ -535,7 +541,7 @@ function PlacedBetNotice({
               that team&apos;s game is {hitCutoff}.
             </>
           ) : (
-            <>This ticket already has 6 teams, so Hit is maxed out.</>
+            <>This ticket already has {pickLimits.max} teams, so Hit is maxed out.</>
           )}
         </p>
         <Link

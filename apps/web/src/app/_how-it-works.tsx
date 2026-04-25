@@ -36,9 +36,9 @@ const HOW_TO: SportHowTo[] = [
     eyebrow: "Teams · Goals",
     summary: "Pick NHL teams and chase 21 total goals across your ticket.",
     steps: [
-      { num: "01", title: "Pick your teams", body: "Choose 3-6 teams from today's or tomorrow's hockey slate." },
+      { num: "01", title: "Pick your teams", body: "Choose 4-8 teams from today's or tomorrow's hockey slate." },
       { num: "02", title: "Chase 21", body: "Their combined goals count toward 21. Stay under or land it exactly." },
-      { num: "03", title: "Hit for more", body: "Add a team early — before the 2nd period begins. 25% of your stake, up to 6 total." },
+      { num: "03", title: "Hit for more", body: "Add a team early — before the 2nd period begins. 25% of your stake, up to 8 total." },
       { num: "04", title: "Win the slate", body: "The closer you finish to 21, the bigger the token payout." },
     ],
   },

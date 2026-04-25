@@ -10,8 +10,18 @@ export function lambdaFor(sport: Sport): number {
 
 export const TARGET = 21;
 export const ZONE_LOW = 15;
-export const MIN_TEAMS = 3;
-export const MAX_TEAMS = 6;
+export const MLB_MIN_TEAMS = 3;
+export const MLB_MAX_TEAMS = 6;
+export const NHL_MIN_TEAMS = 4;
+export const NHL_MAX_TEAMS = 8;
+export const MIN_TEAMS = MLB_MIN_TEAMS;
+export const MAX_TEAMS = MLB_MAX_TEAMS;
+
+export function pickLimitsFor(sport: Sport): { min: number; max: number } {
+  return sport === "nhl"
+    ? { min: NHL_MIN_TEAMS, max: NHL_MAX_TEAMS }
+    : { min: MLB_MIN_TEAMS, max: MLB_MAX_TEAMS };
+}
 
 export const BASE_POINTS: Record<number, number> = {
   15: 1,

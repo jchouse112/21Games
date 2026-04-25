@@ -8,6 +8,7 @@ import {
   LAMBDA_MLB,
   LAMBDA_NHL,
   lambdaFor,
+  pickLimitsFor,
   payoutForTotal,
   previewTable,
   settleBet,
@@ -25,6 +26,16 @@ describe("lambda constants", () => {
   it("lambdaFor returns the right value per sport", () => {
     expect(lambdaFor("mlb")).toBe(LAMBDA_MLB);
     expect(lambdaFor("nhl")).toBe(LAMBDA_NHL);
+  });
+});
+
+describe("sport-specific pick limits", () => {
+  it("keeps MLB at 3-6 teams", () => {
+    expect(pickLimitsFor("mlb")).toEqual({ min: 3, max: 6 });
+  });
+
+  it("sets Ice 21 to 4-8 teams", () => {
+    expect(pickLimitsFor("nhl")).toEqual({ min: 4, max: 8 });
   });
 });
 
