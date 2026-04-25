@@ -405,23 +405,31 @@ function BetControls({
         <div className="mt-6 grid gap-6 sm:grid-cols-[1fr,auto]">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-              Payout if total lands on
+              If your total lands on
             </p>
             <div className="mt-2 grid grid-cols-7 gap-1 text-center">
               {preview.map((row) => (
                 <div
                   key={row.total}
-                  className={`rounded-md border px-1 py-2 ${row.isBj ? "border-emerald-400/40 bg-emerald-400/10" : "border-zinc-800 bg-zinc-900/40"}`}
+                  className={`rounded-md border px-1 py-2.5 ${row.isBj ? "border-emerald-400/40 bg-emerald-400/10" : "border-zinc-800 bg-zinc-900/40"}`}
                 >
-                  <div
+                  <p
                     className={`font-mono text-[10px] uppercase tracking-[0.2em] ${row.isBj ? "text-emerald-300" : "text-zinc-500"}`}
                   >
-                    {row.total}
-                    {row.isBj ? " BJ" : ""}
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-zinc-100">
+                    Total
+                  </p>
+                  <p className={row.isBj ? "mt-0.5 text-sm font-semibold text-emerald-200" : "mt-0.5 text-sm font-semibold text-zinc-200"}>
+                    {row.total}{row.isBj ? " BJ" : ""}
+                  </p>
+                  <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
+                    Pays
+                  </p>
+                  <p className="mt-0.5 text-base font-semibold leading-none text-zinc-100">
                     {row.payout.toFixed(1)}
-                  </div>
+                  </p>
+                  <p className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.16em] text-zinc-600">
+                    tokens
+                  </p>
                 </div>
               ))}
             </div>
