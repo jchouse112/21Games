@@ -178,7 +178,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-t border-zinc-800 px-6 py-24">
+      <section id="faq" className="border-t border-zinc-800 px-6 py-24">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">The lineup</h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-zinc-400">Five sports. One target. 21.</p>
@@ -260,7 +260,7 @@ export default function Home() {
           </div>
           <div className="flex gap-6 text-xs text-zinc-400">
             <Link href="/about" className="hover:text-zinc-200">About</Link>
-            <Link href="/faq" className="hover:text-zinc-200">FAQ</Link>
+            <Link href="/#faq" className="hover:text-zinc-200">FAQ</Link>
             <Link href="/terms" className="hover:text-zinc-200">Terms &amp; Conditions</Link>
             <Link href="/privacy" className="hover:text-zinc-200">Privacy</Link>
           </div>
