@@ -49,9 +49,9 @@ const HOW_TO: SportHowTo[] = [
     eyebrow: "Players · 3-pointers",
     summary: "Pick players and chase 21 made threes across the slate.",
     steps: [
-      { num: "01", title: "Pick your players", body: "Choose 3-6 players from the NBA slate — shooters, stars, or long-shot heat checks." },
+      { num: "01", title: "Pick your players", body: "Choose 5-8 players from the NBA slate — shooters, stars, or long-shot heat checks." },
       { num: "02", title: "Chase 21", body: "Their combined made 3-pointers need to reach 21 without going over." },
-      { num: "03", title: "Hit for more", body: "Add another player while that player's game is still early. Same 25% Hit cost, up to 6 total." },
+      { num: "03", title: "Hit for more", body: "Add another player before the 2nd quarter begins. Same 25% Hit cost, up to 8 total." },
       { num: "04", title: "Win the slate", body: "More made threes gets you closer to 21. Exactly 21 earns the Blackjack bonus." },
     ],
   },
@@ -62,9 +62,9 @@ const HOW_TO: SportHowTo[] = [
     eyebrow: "Teams · Touchdowns",
     summary: "Pick football teams and chase 21 total touchdowns.",
     steps: [
-      { num: "01", title: "Pick your teams", body: "Build a 3-6 team ticket from the football slate." },
+      { num: "01", title: "Pick your teams", body: "Build a 5-8 team ticket from the football slate." },
       { num: "02", title: "Chase 21", body: "Touchdowns are the count. Land close to 21 without going over." },
-      { num: "03", title: "Hit for more", body: "Add a team early in its game. Final football Hit window is coming soon." },
+      { num: "03", title: "Hit for more", body: "Add a team before the 2nd quarter begins. Same 25% Hit cost, up to 8 total." },
       { num: "04", title: "Win the slate", body: "Closest to 21 wins bigger. Exact 21 gets the Blackjack bonus." },
     ],
   },
