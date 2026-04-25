@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { NbaPlayerEntry, NbaSlateGame } from "@/lib/slate";
 import type { TeamScore } from "@/lib/settlement";
 import { getTeamColor } from "@/lib/team-colors";
@@ -17,6 +18,7 @@ interface PlayerGameCardProps {
 }
 
 const LOCK_COUNTDOWN_WINDOW_MS = 30 * 60 * 1000;
+const DEFAULT_VISIBLE_PLAYERS_PER_TEAM = 5;
 
 export function PlayerGameCard({
   game,
@@ -137,15 +139,34 @@ function PlayerColumn({
   playerScores: Map<number, TeamScore>;
   onToggle: (player: NbaPlayerEntry) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const visiblePlayers = expanded
+    ? players
+    : players.filter((player, index) => {
+        return index < DEFAULT_VISIBLE_PLAYERS_PER_TEAM || selectedIds.has(player.id);
+      });
+  const canExpand = players.length > DEFAULT_VISIBLE_PLAYERS_PER_TEAM;
+
   return (
     <div className="border-b border-zinc-800/60 md:border-b-0 md:border-r md:last:border-r-0">
       <div className="flex items-center gap-2 border-b border-zinc-800/60 px-4 py-3">
-        <span className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${getTeamColor(team.abbr, "nba")}`}>{team.abbr}</span>
-        <span className="text-sm font-semibold text-zinc-100">{team.name}</span>
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">{label}</span>
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-full font-mono text-[9px] font-bold text-white ${getTeamColor(team.abbr, "nba")}`}
+        >
+          {team.abbr}
+        </span>
+        <span>
+          <span className="block text-sm font-semibold text-zinc-100">{team.name}</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-500">
+            Top {Math.min(DEFAULT_VISIBLE_PLAYERS_PER_TEAM, players.length)} shooters
+          </span>
+        </span>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+          {label}
+        </span>
       </div>
       <div className="max-h-80 overflow-y-auto">
-        {players.map((player) => {
+        {visiblePlayers.map((player) => {
           const selected = selectedIds.has(player.id);
           const disabled = locked && !selected;
           const score = playerScores.get(player.id) ?? null;
@@ -164,6 +185,7 @@ function PlayerColumn({
                 <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
                   {player.position ?? "NBA"}{player.jersey ? ` · #${player.jersey}` : ""}
                 </span>
+                <PlayerStats player={player} />
               </span>
               {showScores && score ? (
                 <span className="text-right">
@@ -174,7 +196,43 @@ function PlayerColumn({
             </button>
           );
         })}
+        {canExpand ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full border-t border-zinc-800/60 px-4 py-2 text-left font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200 transition hover:bg-zinc-800/50"
+          >
+            {expanded ? "Show top 5" : `Show full roster (${players.length})`}
+          </button>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function formatStat(value: number | null | undefined): string | null {
+  return Number.isFinite(value) ? value!.toFixed(1) : null;
+}
+
+function PlayerStats({ player }: { player: NbaPlayerEntry }) {
+  const stats = player.threePointStats;
+  const made = formatStat(stats?.avgThreePointersMade);
+  const attempted = formatStat(stats?.avgThreePointersAttempted);
+  const pct = formatStat(stats?.threePointPct);
+
+  if (!made && !attempted && !pct) {
+    return (
+      <span className="mt-1 block font-mono text-[9px] uppercase tracking-[0.14em] text-zinc-600">
+        3PT stats unavailable
+      </span>
+    );
+  }
+
+  return (
+    <span className="mt-1 flex flex-wrap gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">
+      {made ? <span>{made} 3PM/G</span> : null}
+      {attempted ? <span>· {attempted} 3PA/G</span> : null}
+      {pct ? <span>· {pct}%</span> : null}
+    </span>
   );
 }

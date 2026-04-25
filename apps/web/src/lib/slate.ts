@@ -15,7 +15,9 @@ import {
 import {
   fetchNbaScoreboard,
   fetchNbaTeamRoster,
+  fetchNbaThreePointStatsMap,
   type NbaCompetitor,
+  type NbaPlayerThreeStats,
   type NbaRosterAthlete,
 } from "./nba";
 import { fetchSoccerScoreboard, type SoccerCompetitor } from "./soccer";
@@ -100,6 +102,7 @@ export type NbaPlayerEntry = {
   jersey: string | null;
   gameId: string;
   startsAtIso: string;
+  threePointStats: NbaPlayerThreeStats | null;
 };
 
 export type NbaSlateGame = {
@@ -312,6 +315,7 @@ function nbaPlayerEntry(
   team: NbaTeamEntry,
   gameId: string,
   startsAtIso: string,
+  statsByPlayer: Map<number, NbaPlayerThreeStats>,
 ): NbaPlayerEntry | null {
   const id = Number(athlete.id);
   if (!Number.isFinite(id)) return null;
@@ -329,24 +333,44 @@ function nbaPlayerEntry(
     jersey: athlete.jersey ?? null,
     gameId,
     startsAtIso,
+    threePointStats: statsByPlayer.get(id) ?? null,
   };
+}
+
+function descStat(value: number | null | undefined): number {
+  return value ?? -1;
+}
+
+function compareNbaShooters(a: NbaPlayerEntry, b: NbaPlayerEntry): number {
+  return (
+    descStat(b.threePointStats?.avgThreePointersMade) -
+      descStat(a.threePointStats?.avgThreePointersMade) ||
+    descStat(b.threePointStats?.avgThreePointersAttempted) -
+      descStat(a.threePointStats?.avgThreePointersAttempted) ||
+    descStat(b.threePointStats?.avgMinutes) - descStat(a.threePointStats?.avgMinutes) ||
+    a.name.localeCompare(b.name)
+  );
 }
 
 async function nbaPlayersForTeam(
   team: NbaTeamEntry,
   gameId: string,
   startsAtIso: string,
+  statsByPlayer: Map<number, NbaPlayerThreeStats>,
 ): Promise<NbaPlayerEntry[]> {
   const roster = await fetchNbaTeamRoster(team.id).catch(() => null);
   return (roster?.athletes ?? [])
-    .map((athlete) => nbaPlayerEntry(athlete, team, gameId, startsAtIso))
+    .map((athlete) => nbaPlayerEntry(athlete, team, gameId, startsAtIso, statsByPlayer))
     .filter((p): p is NbaPlayerEntry => p !== null)
-    .sort((a, b) => a.teamAbbr.localeCompare(b.teamAbbr) || a.name.localeCompare(b.name));
+    .sort(compareNbaShooters);
 }
 
 export async function getTodayNbaSlate(date?: string): Promise<NbaSlate> {
   const isoDate = date ?? getTodayIsoDateEt();
-  const scoreboard = await fetchNbaScoreboard(isoDate);
+  const [scoreboard, statsByPlayer] = await Promise.all([
+    fetchNbaScoreboard(isoDate),
+    fetchNbaThreePointStatsMap(isoDate).catch(() => new Map<number, NbaPlayerThreeStats>()),
+  ]);
 
   const games = await Promise.all(
     (scoreboard.events ?? []).map(async (event): Promise<NbaSlateGame | null> => {
@@ -361,8 +385,8 @@ export async function getTodayNbaSlate(date?: string): Promise<NbaSlate> {
       const id = String(competition.id ?? event.id);
       const startsAtIso = competition.startDate ?? competition.date ?? event.date;
       const [awayPlayers, homePlayers] = await Promise.all([
-        nbaPlayersForTeam(away, id, startsAtIso),
-        nbaPlayersForTeam(home, id, startsAtIso),
+        nbaPlayersForTeam(away, id, startsAtIso, statsByPlayer),
+        nbaPlayersForTeam(home, id, startsAtIso, statsByPlayer),
       ]);
       return {
         id,

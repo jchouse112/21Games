@@ -82,17 +82,60 @@ export interface NbaSummaryResponse {
   header?: { competitions?: NbaCompetition[] };
 }
 
+export type NbaPlayerThreeStats = {
+  gamesPlayed: number | null;
+  avgMinutes: number | null;
+  avgThreePointersMade: number | null;
+  avgThreePointersAttempted: number | null;
+  threePointPct: number | null;
+  threePointersMade: number | null;
+  threePointersAttempted: number | null;
+};
+
+interface NbaStatsCategoryMeta {
+  name?: string;
+  names?: string[];
+}
+
+interface NbaStatsCategoryValues {
+  name?: string;
+  values?: number[];
+  totals?: string[];
+}
+
+interface NbaStatsByAthleteEntry {
+  athlete?: { id?: string };
+  categories?: NbaStatsCategoryValues[];
+}
+
+export interface NbaStatsByAthleteResponse {
+  categories?: NbaStatsCategoryMeta[];
+  athletes?: NbaStatsByAthleteEntry[];
+}
+
 const NBA_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
 const NBA_TEAM_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams";
 const NBA_SUMMARY_URL =
   "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary";
+const NBA_STATS_BY_ATHLETE_URL =
+  "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete";
 
 const ESPN_TTL_SECONDS = 60;
 
 export function toEspnNbaDate(isoDate: string): string {
   return isoDate.replace(/-/g, "");
+}
+
+export function nbaEspnSeasonFromDate(isoDate: string): number {
+  const [yearRaw, monthRaw] = isoDate.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) {
+    return new Date().getUTCFullYear();
+  }
+  return month >= 10 ? year + 1 : year;
 }
 
 async function fetchEspnJson<T>(url: string): Promise<T> {
@@ -126,6 +169,25 @@ export async function fetchNbaSummary(
   return fetchEspnJson<NbaSummaryResponse>(`${NBA_SUMMARY_URL}?event=${eventId}`);
 }
 
+export async function fetchNbaThreePointStatsMap(
+  date: string,
+): Promise<Map<number, NbaPlayerThreeStats>> {
+  const params = new URLSearchParams({
+    region: "us",
+    lang: "en",
+    contentorigin: "espn",
+    isqualified: "false",
+    season: String(nbaEspnSeasonFromDate(date)),
+    seasontype: "2",
+    limit: "1000",
+    sort: "offensive.avgThreePointFieldGoalsMade:desc",
+  });
+  const response = await fetchEspnJson<NbaStatsByAthleteResponse>(
+    `${NBA_STATS_BY_ATHLETE_URL}?${params.toString()}`,
+  );
+  return extractNbaThreePointStatsMap(response);
+}
+
 export function parseNbaMadeThrees(labels?: string[], stats?: string[]): number {
   const idx = labels?.findIndex((label) => label.toUpperCase() === "3PT") ?? -1;
   if (idx < 0) return 0;
@@ -133,4 +195,57 @@ export function parseNbaMadeThrees(labels?: string[], stats?: string[]): number 
   if (!raw) return 0;
   const made = Number(raw.split("-")[0]);
   return Number.isFinite(made) ? made : 0;
+}
+
+function athleteStat(
+  response: NbaStatsByAthleteResponse,
+  entry: NbaStatsByAthleteEntry,
+  categoryName: string,
+  statName: string,
+): number | null {
+  const categoryIndex = response.categories?.findIndex((c) => c.name === categoryName) ?? -1;
+  if (categoryIndex < 0) return null;
+  const statIndex = response.categories?.[categoryIndex]?.names?.indexOf(statName) ?? -1;
+  if (statIndex < 0) return null;
+  const category =
+    entry.categories?.find((c) => c.name === categoryName) ?? entry.categories?.[categoryIndex];
+  const value = category?.values?.[statIndex];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = Number(category?.totals?.[statIndex]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function extractNbaThreePointStatsMap(
+  response: NbaStatsByAthleteResponse,
+): Map<number, NbaPlayerThreeStats> {
+  const map = new Map<number, NbaPlayerThreeStats>();
+  for (const entry of response.athletes ?? []) {
+    const id = Number(entry.athlete?.id);
+    if (!Number.isFinite(id)) continue;
+    map.set(id, {
+      gamesPlayed: athleteStat(response, entry, "general", "gamesPlayed"),
+      avgMinutes: athleteStat(response, entry, "general", "avgMinutes"),
+      avgThreePointersMade: athleteStat(
+        response,
+        entry,
+        "offensive",
+        "avgThreePointFieldGoalsMade",
+      ),
+      avgThreePointersAttempted: athleteStat(
+        response,
+        entry,
+        "offensive",
+        "avgThreePointFieldGoalsAttempted",
+      ),
+      threePointPct: athleteStat(response, entry, "offensive", "threePointFieldGoalPct"),
+      threePointersMade: athleteStat(response, entry, "offensive", "threePointFieldGoalsMade"),
+      threePointersAttempted: athleteStat(
+        response,
+        entry,
+        "offensive",
+        "threePointFieldGoalsAttempted",
+      ),
+    });
+  }
+  return map;
 }
