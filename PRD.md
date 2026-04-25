@@ -74,10 +74,10 @@ The actual payout multiplier at each (N-teams, landed-total) cell is **solved to
 
 | Tier | Balance | Stakes available |
 |---|---|---|
-| Basement | < 10 | 1 |
-| Ground | 10 – 99 | 1, 2 |
-| Main Floor | 100 – 1,999 | 1, 2, 5, 10 |
-| Penthouse | ≥ 2,000 | 1, 2, 5, 10, 25 |
+| Rookie | < 10 | 1 |
+| Starter | 10 – 99 | 1, 2 |
+| All-Star | 100 – 1,999 | 1, 2, 5, 10 |
+| MVP | ≥ 2,000 | 1, 2, 5, 10, 25 |
 
 Tier is recomputed from balance on each pick interaction; stake options update immediately.
 

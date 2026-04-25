@@ -9,7 +9,7 @@ export type UserState = {
   lastRefillEtDate?: string;
 };
 
-export type Tier = "Basement" | "Ground" | "Main Floor" | "Penthouse";
+export type Tier = "Rookie" | "Starter" | "All-Star" | "MVP";
 
 export type TierLevel = {
   tier: Tier;
@@ -30,17 +30,17 @@ export const MIN_STAKE = 1;
 export const REFILL_AMOUNT = 10;
 
 export const TIER_LEVELS: TierLevel[] = [
-  { tier: "Basement", minBalance: 0, stakes: [1] },
-  { tier: "Ground", minBalance: 10, stakes: [1, 2] },
-  { tier: "Main Floor", minBalance: 100, stakes: [1, 2, 5, 10] },
-  { tier: "Penthouse", minBalance: 2000, stakes: [1, 2, 5, 10, 25] },
+  { tier: "Rookie", minBalance: 0, stakes: [1] },
+  { tier: "Starter", minBalance: 10, stakes: [1, 2] },
+  { tier: "All-Star", minBalance: 100, stakes: [1, 2, 5, 10] },
+  { tier: "MVP", minBalance: 2000, stakes: [1, 2, 5, 10, 25] },
 ];
 
 export function getTier(balance: number): Tier {
-  if (balance < 10) return "Basement";
-  if (balance < 100) return "Ground";
-  if (balance < 2000) return "Main Floor";
-  return "Penthouse";
+  if (balance < 10) return "Rookie";
+  if (balance < 100) return "Starter";
+  if (balance < 2000) return "All-Star";
+  return "MVP";
 }
 
 export function getAvailableStakes(balance: number): number[] {

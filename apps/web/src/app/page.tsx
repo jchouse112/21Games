@@ -98,7 +98,7 @@ const FAQ = [
   { q: "What does it cost?", a: "Zero. You get 100 tokens on signup. Hit empty? We'll top you up with 10 tokens at midnight. No credit card, ever." },
   { q: "How do I win?", a: "Every slate, your picks are scored against the 21 target. Closest to 21 without busting wins the biggest payout. Hit exactly 21 for the Blackjack bonus." },
   { q: "Can I change my bet after placing it?", a: "You can Hit to add a team to an open bet \u2014 costs 25% of your original stake, maxes out at 6 teams. The team\u2019s game has to be early: before the 4th inning in baseball, before the 2nd period in hockey. No cash-out, no lock-in." },
-  { q: "What's the Basement? The Penthouse?", a: "Your balance unlocks bet sizes. Under 10 tokens you're in the Basement \u2014 $1 bets only. Climb past 2,000 and you're in the Penthouse." },
+  { q: "How do levels work?", a: "Your token balance unlocks bigger bet sizes: Rookie starts with $1 bets, Starter adds $2, All-Star unlocks $5 and $10, and MVP unlocks $25." },
   { q: "What sports can I play?", a: "Baseball 21 and Ice 21 are live. Hoops, Gridiron, and Pitch are rolling out through the season." },
   { q: "Will there ever be real money?", a: "Not in the core game. Ever. We may run occasional skill-based tournaments with real prizes, but the daily slate stays free and token-only." },
 ];
