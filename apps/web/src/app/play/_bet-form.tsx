@@ -53,7 +53,7 @@ export function BetForm({
   day: SlateDay;
 }) {
   const { user, state, updateBalance } = useDevUser();
-  const { addBet, openBets } = useBets();
+  const { addBet } = useBets();
   const stakes = getAvailableStakes(state.balance);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stake, setStake] = useState<number>(stakes[0] ?? 1);
@@ -124,17 +124,6 @@ export function BetForm({
     slate !== null &&
     slate.games.length > 0;
 
-  const lockedTeamIds = useMemo(() => {
-    const set = new Set<number>();
-    if (!slate) return set;
-    for (const b of openBets) {
-      if (b.sport !== sport) continue;
-      if (b.slateDate !== slate.date) continue;
-      for (const t of b.teams) set.add(t.id);
-    }
-    return set;
-  }, [openBets, slate, sport]);
-
   const lambda = useMemo(() => lambdaFor(sport), [sport]);
   const preview = useMemo(
     () =>
@@ -147,7 +136,6 @@ export function BetForm({
   );
 
   function togglePick(team: AnyTeamEntry, gameId: string) {
-    if (lockedTeamIds.has(team.id)) return;
     if (startedTeamIds.has(team.id)) return;
     setPlacedBet(null);
     const game = slate?.games.find((g) => g.id === gameId);
@@ -224,16 +212,9 @@ export function BetForm({
         {(slate.games as AnySlateGame[]).map((g) => {
           const awaySelected = picks.some((p) => p.id === g.away.id);
           const homeSelected = picks.some((p) => p.id === g.home.id);
-          const awayLocked = lockedTeamIds.has(g.away.id);
-          const homeLocked = lockedTeamIds.has(g.home.id);
           const info = lockInfoByGame.get(g.id);
           const started = info?.locked ?? false;
-          const reason = (teamLocked: boolean) =>
-            started
-              ? "Game has started \u2014 picks locked"
-              : teamLocked
-                ? "Team is already in another open bet"
-                : undefined;
+          const reason = started ? "Game has started \u2014 picks locked" : undefined;
           return (
             <GameCard
               key={g.id}
@@ -241,10 +222,10 @@ export function BetForm({
               game={g}
               awaySelected={awaySelected}
               homeSelected={homeSelected}
-              awayDisabled={(awayLocked || started) && !awaySelected}
-              homeDisabled={(homeLocked || started) && !homeSelected}
-              awayDisabledReason={reason(awayLocked)}
-              homeDisabledReason={reason(homeLocked)}
+              awayDisabled={started && !awaySelected}
+              homeDisabled={started && !homeSelected}
+              awayDisabledReason={reason}
+              homeDisabledReason={reason}
               awayScore={runs.get(g.away.id) ?? null}
               homeScore={runs.get(g.home.id) ?? null}
               msUntilLock={info?.msUntilLock ?? null}
@@ -265,7 +246,6 @@ export function BetForm({
         canSubmit={canSubmit}
         onSubmit={submit}
         onClear={() => setPicks([])}
-        lockedCount={lockedTeamIds.size}
         droppedCount={droppedPicks}
         placedBet={placedBet}
         onDismissConfirmation={() => setPlacedBet(null)}
@@ -348,7 +328,6 @@ function BetControls({
   canSubmit,
   onSubmit,
   onClear,
-  lockedCount,
   droppedCount,
   placedBet,
   onDismissConfirmation,
@@ -363,7 +342,6 @@ function BetControls({
   canSubmit: boolean;
   onSubmit: () => void;
   onClear: () => void;
-  lockedCount: number;
   droppedCount: number;
   placedBet: PlacedBetConfirmation | null;
   onDismissConfirmation: () => void;
@@ -382,11 +360,6 @@ function BetControls({
             {nTeams < MIN_TEAMS ? (
               <span className="ml-2 text-zinc-500">
                 ({MIN_TEAMS - nTeams} more to submit)
-              </span>
-            ) : null}
-            {lockedCount > 0 ? (
-              <span className="ml-2 text-zinc-600">
-                &middot; {lockedCount} team{lockedCount === 1 ? "" : "s"} locked in open bets
               </span>
             ) : null}
             {droppedCount > 0 ? (

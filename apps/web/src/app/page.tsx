@@ -261,7 +261,7 @@ export default function Home() {
           <div className="flex gap-6 text-xs text-zinc-400">
             <Link href="/about" className="hover:text-zinc-200">About</Link>
             <Link href="/faq" className="hover:text-zinc-200">FAQ</Link>
-            <Link href="/terms" className="hover:text-zinc-200">Terms</Link>
+            <Link href="/terms" className="hover:text-zinc-200">Terms &amp; Conditions</Link>
             <Link href="/privacy" className="hover:text-zinc-200">Privacy</Link>
           </div>
         </div>

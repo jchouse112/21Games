@@ -13,7 +13,7 @@ Play 21 Games is a free-to-play sports blackjack platform. Players pick 3–6 ML
 **Goals (v0 MVP)**
 - Deliver the full loop end-to-end for one MLB slate: pick → place → settle → balance update.
 - Integrate live MLB schedule + results via the public Stats API.
-- Support multiple concurrent bets per slate with sensible cross-bet constraints.
+- Support multiple concurrent bets per slate; each new slip can reuse teams from prior bets.
 - Tier-gated stake options and automatic refill at zero balance.
 - Mobile-first single-page experience that works without auth.
 
@@ -52,8 +52,7 @@ The actual payout multiplier at each (N-teams, landed-total) cell is **solved to
 ### 4.3 Bet rules
 
 - Each bet holds **3–6 teams** from the current slate.
-- **Multiple bets per slate** allowed per user (bounded only by balance and team availability).
-- **Cross-bet team lock**: a team in one of your open bets cannot appear in another of your open bets for the same slate.
+- **Multiple bets per slate** allowed per user; teams can be reused across separate bets.
 - **Both teams from the same matchup** are pickable within a single bet.
 - Bets are locked at submission; **Cancel** before first pitch to fully refund the stake.
 - **Pick lock per game**: once a game has started, both of its teams become unpickable for new bets. *(Not yet implemented.)*
@@ -122,7 +121,7 @@ Brand wordmark · **Bet / My Bets** nav tabs · current tier · balance · dev-u
 
 ### 8.2 `/play` — Bet submission
 1. **Open bets pill** — compact banner `N open bets · View my bets →` when the user has any open bets; hidden otherwise.
-2. **Today's slate** — game card grid. Each card shows team colors, name, and either pregame flavor (pitcher, ERA, venue, start time) or **live overlay** (status chip, current inning, per-team runs) once that game has started. Clicking a team row toggles it into the current pick set, subject to cross-bet team lock.
+2. **Today's slate** — game card grid. Each card shows team colors, name, and either pregame flavor (pitcher, ERA, venue, start time) or **live overlay** (status chip, current inning, per-team runs) once that game has started. Clicking a team row toggles it into the current pick set, subject only to game-start lock and the 6-team cap.
 3. **Bet controls** — picks summary, tier-gated stake selector, payout preview grid (15–21), win/BJ/bust %, Place bet.
 
 ### 8.3 `/play/my-bets` — My dashboard
@@ -156,7 +155,7 @@ No other pages in v0.
 | 3 | MLB slate loader (schedule + teams) | ✓ done |
 | 4 | Game cards w/ pitcher + ERA + team colors | ✓ done |
 | 5 | Bet form + odds preview | ✓ done |
-| 6 | Multi-bet + cross-bet team lock + same-matchup picks | ✓ done |
+| 6 | Multi-bet + same-matchup picks | ✓ done |
 | 7 | **Settlement engine (mock scores first, then live)** | **next** |
 | 8 | Closed bets section | after #7 |
 | 9 | Void handling for postponed / suspended games | after #7 |
