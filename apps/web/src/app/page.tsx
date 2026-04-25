@@ -16,7 +16,7 @@ const SPORTS: Array<{
   { name: "Ice 21", metric: "Goals", status: "Live", featured: true, icon: "puck", href: "/play/nhl" },
   { name: "Hoops 21", metric: "3-pointers", status: "Coming soon", featured: false, icon: "basketball" },
   { name: "Gridiron 21", metric: "Touchdowns", status: "Coming soon", featured: false, icon: "football" },
-  { name: "Pitch 9", metric: "Goals", status: "Coming soon", featured: false, icon: "soccer" },
+  { name: "Pitch 11", metric: "11-goal target", status: "Coming soon", featured: false, icon: "soccer" },
 ];
 
 function SportGlyph({ icon, className }: { icon: SportIcon; className?: string }) {
@@ -75,7 +75,7 @@ const FAQ = [
   { q: "Is this gambling?", a: "No. Play 21 Games is a free-to-play skill game. You play with Play Tokens, not dollars. No deposits, no withdrawals, no cash wagering." },
   { q: "What does it cost?", a: "Zero. You get 100 tokens on signup. Hit empty? We'll top you up with 10 tokens at midnight. No credit card, ever." },
   { q: "How do I win?", a: "Every slate, your picks are scored against that game's target. Closest without busting wins the biggest payout. Hit the target exactly for the Blackjack bonus." },
-  { q: "Can I change my bet after placing it?", a: "You can Hit to add a team or player to an open bet — costs 25% of your original stake. Baseball maxes out at 6 picks; hockey maxes out at 8. The pick has to still be early: before the 4th inning in baseball, before the 2nd period in hockey. No cash-out, no lock-in." },
+  { q: "Can I change my bet after placing it?", a: "You can Hit to add a team or player to an open bet — costs 25% of your original stake. Baseball maxes out at 6 picks; hockey maxes out at 8; soccer is planned for 9. The pick has to still be early: before the 4th inning in baseball, before the 2nd period in hockey, or before the end of the 1st half in soccer. No cash-out, no lock-in." },
   { q: "How do levels work?", a: "Your token balance unlocks bigger bet sizes: Rookie starts with $1 bets, Starter adds $2, All-Star unlocks $5 and $10, and MVP unlocks $25." },
   { q: "What sports can I play?", a: "Baseball 21 and Ice 21 are live. Hoops, Gridiron, and Pitch are rolling out through the season." },
   { q: "Will there ever be real money?", a: "Not in the core game. Ever. We may run occasional skill-based tournaments with real prizes, but the daily slate stays free and token-only." },

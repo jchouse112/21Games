@@ -70,15 +70,15 @@ const HOW_TO: SportHowTo[] = [
   },
   {
     key: "soccer",
-    label: "Pitch 9",
+    label: "Pitch 11",
     status: "Coming soon",
     eyebrow: "Teams · Goals",
-    summary: "A lower-scoring soccer variant built around a 9-goal target.",
+    summary: "A soccer variant built around an 11-goal target — one for every player on the pitch.",
     steps: [
-      { num: "01", title: "Pick your teams", body: "Choose teams from the soccer slate once Pitch goes live." },
-      { num: "02", title: "Chase 9", body: "Soccer is lower scoring, so Pitch uses a 9-goal target instead of 21." },
-      { num: "03", title: "Hit for more", body: "Add another team before its match moves too far along. Final rules coming soon." },
-      { num: "04", title: "Win the slate", body: "Finish closest to the target without going over." },
+      { num: "01", title: "Pick your teams", body: "Choose 5-9 teams from the soccer slate once Pitch goes live." },
+      { num: "02", title: "Chase 11", body: "Their combined goals need to land on 11 — or finish just under in the 8-10 win zone." },
+      { num: "03", title: "Hit for more", body: "Add another team before the end of its 1st half. Same 25% Hit cost, up to 9 total." },
+      { num: "04", title: "Win the slate", body: "Finish closest to 11 without going over. Exactly 11 earns the bonus." },
     ],
   },
 ];
@@ -92,7 +92,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-5xl">
         <h2 className="text-center text-4xl font-semibold tracking-tight sm:text-5xl">How it works</h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-zinc-400">
-          Each sport keeps the blackjack target, but the stat changes — runs, goals, threes, touchdowns, and more.
+          Each sport gets a blackjack-style target, but the stat changes — runs, goals, threes, touchdowns, and more.
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-2" role="tablist" aria-label="Choose sport rules">
