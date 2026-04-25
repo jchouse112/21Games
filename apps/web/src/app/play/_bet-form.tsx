@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { getAvailableStakes } from "@/lib/dev-users";
 import { useDevUser } from "@/lib/use-dev-user";
@@ -31,6 +32,12 @@ type Pick = BetTeam;
 type AnySlate = Slate | NhlSlate;
 type AnySlateGame = SlateGame | NhlSlateGame;
 type AnyTeamEntry = TeamEntry | NhlTeamEntry;
+type PlacedBetConfirmation = {
+  id: string;
+  sport: Sport;
+  stake: number;
+  teamCount: number;
+};
 
 const SPORT_LABELS: Record<Sport, string> = { mlb: "MLB", nhl: "NHL" };
 
@@ -46,6 +53,7 @@ export function BetForm({
   const stakes = getAvailableStakes(state.balance);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stake, setStake] = useState<number>(stakes[0] ?? 1);
+  const [placedBet, setPlacedBet] = useState<PlacedBetConfirmation | null>(null);
 
   const { runsBySportDate } = useLiveScores(
     slate ? [{ sport, date: slate.date }] : [],
@@ -137,6 +145,7 @@ export function BetForm({
   function togglePick(team: AnyTeamEntry, gameId: string) {
     if (lockedTeamIds.has(team.id)) return;
     if (startedTeamIds.has(team.id)) return;
+    setPlacedBet(null);
     const game = slate?.games.find((g) => g.id === gameId);
     setPicks((prev) => {
       if (prev.find((p) => p.id === team.id)) {
@@ -161,8 +170,10 @@ export function BetForm({
 
   function submit() {
     if (!canSubmit || !slate) return;
+    const id = generateBetId();
+    const teamCount = effectivePicks.length;
     addBet({
-      id: generateBetId(),
+      id,
       userId: user.id,
       sport,
       slateDate: slate.date,
@@ -175,6 +186,7 @@ export function BetForm({
     });
     updateBalance(state.balance - effectiveStake);
     setPicks([]);
+    setPlacedBet({ id, sport, stake: effectiveStake, teamCount });
   }
 
   if (slate === null) {
@@ -248,6 +260,8 @@ export function BetForm({
         onClear={() => setPicks([])}
         lockedCount={lockedTeamIds.size}
         droppedCount={droppedPicks}
+        placedBet={placedBet}
+        onDismissConfirmation={() => setPlacedBet(null)}
       />
     </Shell>
   );
@@ -288,6 +302,8 @@ function BetControls({
   onClear,
   lockedCount,
   droppedCount,
+  placedBet,
+  onDismissConfirmation,
 }: {
   picks: Pick[];
   stakes: number[];
@@ -301,6 +317,8 @@ function BetControls({
   onClear: () => void;
   lockedCount: number;
   droppedCount: number;
+  placedBet: PlacedBetConfirmation | null;
+  onDismissConfirmation: () => void;
 }) {
   const nTeams = picks.length;
   return (
@@ -401,9 +419,17 @@ function BetControls({
         </div>
       ) : null}
 
+      {placedBet ? (
+        <PlacedBetNotice
+          placedBet={placedBet}
+          onDismiss={onDismissConfirmation}
+        />
+      ) : null}
+
       <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
         <p className="mr-auto font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-          Balance {balance} &rarr; {Math.max(0, balance - stake)} after stake
+          Balance {balance}
+          {canSubmit ? <> &rarr; {Math.max(0, balance - stake)} after stake</> : null}
         </p>
         <button
           type="button"
@@ -421,6 +447,63 @@ function BetControls({
         >
           Place bet &mdash; {stake} {stake === 1 ? "token" : "tokens"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function PlacedBetNotice({
+  placedBet,
+  onDismiss,
+}: {
+  placedBet: PlacedBetConfirmation;
+  onDismiss: () => void;
+}) {
+  const remainingHits = MAX_TEAMS - placedBet.teamCount;
+  const hitCutoff =
+    placedBet.sport === "nhl"
+      ? "before the 2nd period begins"
+      : "before the 4th inning begins";
+
+  return (
+    <div className="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-300">
+            Bet placed
+          </p>
+          <p className="mt-1 text-sm text-zinc-200">
+            Your {placedBet.teamCount}-team ticket is live for {placedBet.stake}{" "}
+            token{placedBet.stake === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500 transition hover:text-zinc-200"
+        >
+          Dismiss
+        </button>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+        <p className="text-sm text-zinc-400">
+          {remainingHits > 0 ? (
+            <>
+              Want another team? Open <span className="text-zinc-200">My Bets</span> and
+              tap <span className="text-amber-200">Hit</span>. You can add up to{" "}
+              {remainingHits} more for 25% of the original stake each, as long as
+              that team&apos;s game is {hitCutoff}.
+            </>
+          ) : (
+            <>This ticket already has 6 teams, so Hit is maxed out.</>
+          )}
+        </p>
+        <Link
+          href="/play/my-bets"
+          className="rounded-md border border-emerald-400/50 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-400/20"
+        >
+          View my bets
+        </Link>
       </div>
     </div>
   );
