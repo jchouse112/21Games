@@ -165,7 +165,7 @@ function PlayerColumn({
           {label}
         </span>
       </div>
-      <div className="max-h-80 overflow-y-auto">
+      <div className={expanded ? "max-h-[30rem] overflow-y-auto" : "overflow-visible"}>
         {visiblePlayers.map((player) => {
           const selected = selectedIds.has(player.id);
           const disabled = locked && !selected;
@@ -178,18 +178,18 @@ function PlayerColumn({
               disabled={disabled}
               title={disabled ? disabledReason : undefined}
               onClick={() => onToggle(player)}
-              className={`flex w-full items-center justify-between gap-3 border-b border-zinc-800/40 px-4 py-3 text-left transition last:border-b-0 ${selected ? "border-l-4 border-l-emerald-400 bg-emerald-400/10 pl-[calc(1rem-4px)]" : disabled ? "cursor-not-allowed opacity-40" : "hover:bg-zinc-800/50"}`}
+              className={`flex w-full items-center justify-between gap-3 border-b border-zinc-800/40 px-4 py-3 text-left transition last:border-b-0 ${selected ? "border-l-4 border-l-emerald-400 bg-emerald-400/10 pl-[calc(1rem-4px)]" : disabled ? "cursor-not-allowed bg-zinc-950/20" : "hover:bg-zinc-800/50"}`}
             >
               <span>
                 <span className="block text-sm font-semibold text-zinc-100">{player.name}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-500">
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-400">
                   {player.position ?? "NBA"}{player.jersey ? ` · #${player.jersey}` : ""}
                 </span>
                 <PlayerStats player={player} />
               </span>
               {showScores && score ? (
                 <span className="text-right">
-                  <span className="block font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">3PM</span>
+                  <span className="block font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-400">3PM</span>
                   <span className={`text-2xl font-semibold leading-none ${selected ? "text-emerald-300" : "text-zinc-100"}`}>{score.runs}</span>
                 </span>
               ) : null}
@@ -229,7 +229,7 @@ function PlayerStats({ player }: { player: NbaPlayerEntry }) {
   }
 
   return (
-    <span className="mt-1 flex flex-wrap gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-400">
+    <span className="mt-1 flex flex-wrap gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-300">
       {made ? <span>{made} 3PM/G</span> : null}
       {attempted ? <span>· {attempted} 3PA/G</span> : null}
       {pct ? <span>· {pct}%</span> : null}
