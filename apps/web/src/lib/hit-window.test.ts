@@ -15,12 +15,7 @@ function score(teamId: number, overrides: Partial<TeamScore> = {}): TeamScore {
   };
 }
 
-describe("isTeamHitEligible", () => {
-  it("is never eligible for non-MLB sports", () => {
-    expect(isTeamHitEligible("nhl", score(1, { status: "scheduled" }))).toBe(false);
-    expect(isTeamHitEligible("nhl", undefined)).toBe(false);
-  });
-
+describe("isTeamHitEligible — MLB", () => {
   it("treats a missing score as scheduled and eligible", () => {
     expect(isTeamHitEligible("mlb", undefined)).toBe(true);
   });
@@ -54,5 +49,43 @@ describe("isTeamHitEligible", () => {
 
   it("is not eligible when the game is voided", () => {
     expect(isTeamHitEligible("mlb", score(1, { status: "voided" }))).toBe(false);
+  });
+});
+
+describe("isTeamHitEligible — NHL", () => {
+  it("treats a missing score as scheduled and eligible", () => {
+    expect(isTeamHitEligible("nhl", undefined)).toBe(true);
+  });
+
+  it("is eligible while the game is still scheduled", () => {
+    expect(isTeamHitEligible("nhl", score(1, { status: "scheduled" }))).toBe(true);
+  });
+
+  it("is eligible while live in the 1st period", () => {
+    expect(
+      isTeamHitEligible("nhl", score(1, { status: "live", period: 1 })),
+    ).toBe(true);
+  });
+
+  it("is not eligible once the 2nd period begins", () => {
+    expect(
+      isTeamHitEligible("nhl", score(1, { status: "live", period: 2 })),
+    ).toBe(false);
+  });
+
+  it("is not eligible in later periods, OT, or final", () => {
+    expect(
+      isTeamHitEligible("nhl", score(1, { status: "live", period: 3 })),
+    ).toBe(false);
+    expect(
+      isTeamHitEligible("nhl", score(1, { status: "live", period: 4 })),
+    ).toBe(false);
+    expect(
+      isTeamHitEligible("nhl", score(1, { status: "final", period: 3 })),
+    ).toBe(false);
+  });
+
+  it("is not eligible when the game is voided", () => {
+    expect(isTeamHitEligible("nhl", score(1, { status: "voided" }))).toBe(false);
   });
 });

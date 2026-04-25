@@ -205,7 +205,7 @@ function BetRow({
 
   return (
     <li className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)_96px] lg:items-center">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <SportBadge sport={bet.sport} />
@@ -218,72 +218,79 @@ function BetRow({
             {bet.teams.length} teams · placed {placed} · win {(probs.pZone * 100).toFixed(0)}% · bj {(probs.pBj * 100).toFixed(1)}%
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
+        <div className="grid grid-cols-3 items-start gap-3 rounded-lg border border-zinc-900 bg-black/10 px-3 py-2">
+          <div className="text-left sm:text-right">
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
               Total
             </p>
-            <p className={`text-2xl font-semibold ${totalTint}`}>{totalLabel}</p>
+            <p className={`mt-1 text-3xl font-semibold leading-none ${totalTint}`}>{totalLabel}</p>
+            <p className="mt-1 min-h-[12px] font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+              live
+            </p>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
               Payout
             </p>
-            <p className={`text-2xl font-semibold ${payoutTint}`}>{payoutLabel}</p>
-            <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+            <p className={`mt-1 text-2xl font-semibold leading-none ${payoutTint}`}>{payoutLabel}</p>
+            <p className="mt-1 min-h-[12px] font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
               {payoutSub}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
               Stake
             </p>
-            <p className="text-lg font-semibold text-zinc-100">
+            <p className="mt-1 text-2xl font-semibold leading-none text-zinc-100">
               {bet.stake.toFixed(bet.stake === bet.baseStake ? 0 : 2)}
             </p>
             {bet.hits.length > 0 ? (
-              <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+              <p className="mt-1 min-h-[12px] font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
                 base {bet.baseStake} + {bet.hits.length} hit
                 {bet.hits.length === 1 ? "" : "s"}
               </p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-2">
-            {canSettle ? (
-              <button
-                type="button"
-                onClick={() => onSettle(runs)}
-                className="rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
-              >
-                Settle
-              </button>
-            ) : anyGameStarted ? (
-              <span
-                className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500"
-                title="Cancel disabled once any game in the bet has started"
-              >
-                Locked
-              </span>
             ) : (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-red-400 hover:text-red-300"
-              >
-                Cancel
-              </button>
+              <p className="mt-1 min-h-[12px] font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
+                risk
+              </p>
             )}
-            {canHit ? (
-              <button
-                type="button"
-                onClick={onRequestHit}
-                className="rounded-md border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
-                title={`Add a team for +${hitCost.toFixed(2)} (25% of base)`}
-              >
-                Hit · +{hitCost.toFixed(2)}
-              </button>
-            ) : null}
           </div>
+        </div>
+        <div className="flex gap-2 sm:flex-row lg:flex-col">
+          {canSettle ? (
+            <button
+              type="button"
+              onClick={() => onSettle(runs)}
+              className="w-full rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+            >
+              Settle
+            </button>
+          ) : anyGameStarted ? (
+            <span
+              className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-center font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-500"
+              title="Cancel disabled once any game in the bet has started"
+            >
+              Locked
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-red-400 hover:text-red-300"
+            >
+              Cancel
+            </button>
+          )}
+          {canHit ? (
+            <button
+              type="button"
+              onClick={onRequestHit}
+              className="w-full rounded-md border border-amber-400/50 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
+              title={`Add a team for +${hitCost.toFixed(2)} (25% of base)`}
+            >
+              Hit · +{hitCost.toFixed(2)}
+            </button>
+          ) : null}
         </div>
       </div>
     </li>

@@ -37,11 +37,11 @@ export function HitPicker({
   const runs = runsBySportDate.get(scoreKey(bet.sport, bet.slateDate)) ?? new Map();
 
   useEffect(() => {
-    if (bet.sport !== "mlb") return;
+    if (bet.sport !== "mlb" && bet.sport !== "nhl") return;
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`/api/slate/mlb?date=${bet.slateDate}`);
+        const r = await fetch(`/api/slate/${bet.sport}?date=${bet.slateDate}`);
         if (!r.ok) throw new Error(`${r.status}`);
         const data: SlateLite = await r.json();
         if (!cancelled) setSlate(data);
@@ -103,8 +103,8 @@ export function HitPicker({
         <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
           Base {bet.baseStake} · hits {bet.hits.length} · committed {bet.stake.toFixed(2)}
         </p>
-        {bet.sport !== "mlb" ? (
-          <p className="mt-6 text-sm text-zinc-400">Hit is MLB-only for now.</p>
+        {bet.sport !== "mlb" && bet.sport !== "nhl" ? (
+          <p className="mt-6 text-sm text-zinc-400">Hit isn&apos;t available for this sport yet.</p>
         ) : error ? (
           <p className="mt-6 text-sm text-rose-300">Couldn&apos;t load slate: {error}</p>
         ) : !slate ? (
